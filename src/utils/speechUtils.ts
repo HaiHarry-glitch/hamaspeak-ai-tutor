@@ -1,3 +1,4 @@
+
 // List of available voices from Web Speech API
 export const getAvailableVoices = () => {
   return new Promise<SpeechSynthesisVoice[]>((resolve) => {
@@ -118,12 +119,56 @@ export const calculatePronunciationScore = (original: string, userTranscript: st
     ? exactWordMatches / originalWords.length
     : 0;
   
+  // Calculate phonetic similarity using soundex
+  const phoneticSimilarity = calculatePhoneticSimilarity(normalizedOriginal, normalizedUser);
+  
   // Combined score (weighted)
-  const combinedScore = (similarity * 0.6) + (wordMatchRatio * 0.4);
+  const combinedScore = (similarity * 0.4) + (wordMatchRatio * 0.3) + (phoneticSimilarity * 0.3);
   
   // Convert to a score between 0-100
   return Math.round(combinedScore * 100);
 };
+
+// Helper function to calculate phonetic similarity
+function calculatePhoneticSimilarity(str1: string, str2: string): number {
+  // Simple implementation using word-by-word comparison
+  const words1 = str1.split(' ').filter(w => w.length > 0);
+  const words2 = str2.split(' ').filter(w => w.length > 0);
+  
+  if (words1.length === 0 || words2.length === 0) {
+    return 0;
+  }
+  
+  let matches = 0;
+  for (const word1 of words1) {
+    for (const word2 of words2) {
+      if (soundsLike(word1, word2)) {
+        matches++;
+        break;
+      }
+    }
+  }
+  
+  return matches / Math.max(words1.length, words2.length);
+}
+
+// Simple phonetic comparison
+function soundsLike(word1: string, word2: string): boolean {
+  // Very basic - first letter and length similarity check
+  if (word1.length === 0 || word2.length === 0) return false;
+  
+  const firstChar1 = word1.charAt(0).toLowerCase();
+  const firstChar2 = word2.charAt(0).toLowerCase();
+  
+  // First character should match
+  if (firstChar1 !== firstChar2) return false;
+  
+  // Length shouldn't differ too much
+  const lengthDiff = Math.abs(word1.length - word2.length);
+  if (lengthDiff > Math.min(word1.length, word2.length) / 2) return false;
+  
+  return true;
+}
 
 // Helper function to calculate Levenshtein distance
 function levenshteinDistance(a: string, b: string): number {
@@ -156,7 +201,7 @@ function levenshteinDistance(a: string, b: string): number {
   return matrix[b.length][a.length];
 }
 
-// Free translation API function
+// Free translation API function - using MyMemory
 export const translateText = async (text: string, targetLang: string = 'vi'): Promise<string> => {
   try {
     // Use a free translation API
@@ -168,10 +213,40 @@ export const translateText = async (text: string, targetLang: string = 'vi'): Pr
       return data.responseData.translatedText;
     }
     
-    // Fallback to mock translations
-    return mockTranslate(text);
+    // Fallback to LibreTranslate if MyMemory fails
+    return translateWithLibre(text, targetLang);
   } catch (error) {
     console.error("Translation API error:", error);
+    return translateWithLibre(text, targetLang);
+  }
+};
+
+// Fallback translation with LibreTranslate
+const translateWithLibre = async (text: string, targetLang: string = 'vi'): Promise<string> => {
+  try {
+    // Use LibreTranslate public API
+    const url = 'https://libretranslate.com/translate';
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        q: text,
+        source: 'en',
+        target: targetLang,
+      })
+    });
+    
+    const data = await response.json();
+    if (data && data.translatedText) {
+      return data.translatedText;
+    }
+    
+    // If all APIs fail, fall back to mock translation
+    return mockTranslate(text);
+  } catch (error) {
+    console.error("LibreTranslate API error:", error);
     return mockTranslate(text);
   }
 };
@@ -208,6 +283,14 @@ export const segmentTextIntoPhrases = (text: string): string[] => {
   
   const phrases: string[] = [];
   
+  // These are common phrases that shouldn't be split
+  const commonPhrases = [
+    'for example', 'in addition', 'as well as', 'such as',
+    'in order to', 'due to the fact that', 'on the other hand',
+    'at the same time', 'in spite of', 'regardless of',
+    'in the meantime', 'in conclusion', 'as a result'
+  ];
+  
   // Process each sentence into phrases
   sentences.forEach(sentence => {
     // For very short sentences, keep as is
@@ -230,12 +313,22 @@ export const segmentTextIntoPhrases = (text: string): string[] => {
         return;
       }
       
+      // Check if the phrase contains any common phrase that should be kept together
+      const shouldKeepTogether = commonPhrases.some(common => 
+        phrase.toLowerCase().includes(common)
+      );
+      
+      if (shouldKeepTogether && phrase.length <= 80) {
+        phrases.push(phrase);
+        return;
+      }
+      
       // Split longer phrases by words, maintaining reasonable chunk sizes
       const words = phrase.split(' ');
       let currentPhrase = '';
       
       words.forEach(word => {
-        if ((currentPhrase + ' ' + word).length <= 50) {
+        if ((currentPhrase + ' ' + word).length <= 40) {
           currentPhrase = currentPhrase ? `${currentPhrase} ${word}` : word;
         } else {
           if (currentPhrase) {
@@ -265,11 +358,11 @@ export const generateFillInTheBlanks = (phrase: string): string => {
   }
   
   // Skip articles, prepositions, and very short words
-  const skipWords = ['the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'and', 'but', 'or'];
+  const skipWords = ['the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'and', 'but', 'or', 'for', 'with', 'by'];
   
   // Find words suitable for blanking (not too short, not in skip list)
   const suitableIndices = words
-    .map((word, index) => ({ word: word.toLowerCase(), index }))
+    .map((word, index) => ({ word: word.toLowerCase().replace(/[^a-z]/g, ''), index }))
     .filter(item => !skipWords.includes(item.word) && item.word.length > 2)
     .map(item => item.index);
   

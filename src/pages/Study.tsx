@@ -3,19 +3,17 @@ import React from 'react';
 import { StudyProvider, useStudy } from '@/contexts/StudyContext';
 import TextInput from '@/components/study/TextInput';
 import Step1Listening from '@/components/study/Step1Listening';
-import Step2Speaking from '@/components/study/Step2Speaking';
-import Step3FillBlanks from '@/components/study/Step3FillBlanks';
-import Step4FullSpeaking from '@/components/study/Step4FullSpeaking';
+import Step2Flashcards from '@/components/study/Step2Flashcards';
+import Step3EnglishSpeaking from '@/components/study/Step3EnglishSpeaking';
+import Step4VietnameseSpeaking from '@/components/study/Step4VietnameseSpeaking';
+import Step5FillBlanks from '@/components/study/Step5FillBlanks';
+import Step6ListeningComprehension from '@/components/study/Step6ListeningComprehension';
+import Step7ParagraphSpeaking from '@/components/study/Step7ParagraphSpeaking';
+import Step8CompleteSpeaking from '@/components/study/Step8CompleteSpeaking';
 import VoiceSelector from '@/components/study/VoiceSelector';
 import StudyProgress from '@/components/study/StudyProgress';
 import Header from '@/components/Header';
 import { Loader2 } from 'lucide-react';
-
-// We'll add placeholders for the new steps
-const Step5BlankFilling = () => <div>Bước 5: Điền vào chỗ trống (đang phát triển)</div>;
-const Step6ListeningComprehension = () => <div>Bước 6: Nghe hiểu câu Tiếng Việt (đang phát triển)</div>;
-const Step7ParagraphSpeaking = () => <div>Bước 7: Luyện nói đoạn văn (đang phát triển)</div>;
-const Step8CompleteSpeaking = () => <div>Bước 8: Nói hoàn chỉnh (đang phát triển)</div>;
 
 const StudyContent = () => {
   const { currentStep, isAnalyzing } = useStudy();
@@ -47,11 +45,15 @@ const StudyContent = () => {
         </div>
         
         {currentStep === 0 && <TextInput />}
+        
+        {/* Input steps (1-4) */}
         {currentStep === 1 && <Step1Listening />}
-        {currentStep === 2 && <Step2Speaking />}
-        {currentStep === 3 && <Step3FillBlanks />}
-        {currentStep === 4 && <Step4FullSpeaking />}
-        {currentStep === 5 && <Step5BlankFilling />}
+        {currentStep === 2 && <Step2Flashcards />}
+        {currentStep === 3 && <Step3EnglishSpeaking />}
+        {currentStep === 4 && <Step4VietnameseSpeaking />}
+        
+        {/* Output steps (5-8) */}
+        {currentStep === 5 && <Step5FillBlanks />}
         {currentStep === 6 && <Step6ListeningComprehension />}
         {currentStep === 7 && <Step7ParagraphSpeaking />}
         {currentStep === 8 && <Step8CompleteSpeaking />}

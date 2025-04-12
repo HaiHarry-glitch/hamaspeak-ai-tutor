@@ -131,7 +131,7 @@ const Step1Listening = () => {
       
       <div className="mt-6 text-center">
         <p className="text-xs text-gray-500">
-          Đang học phần Input - Tập trung vào việc nghe và hiểu
+          Đang học phần Input - Tập trung vào việc nghe và hiểu từng cụm từ
         </p>
       </div>
     </Card>

@@ -6,16 +6,16 @@ const StudyProgress = () => {
   const { currentStep } = useStudy();
   
   const inputSteps = [
-    { id: 1, name: 'Luyện nghe từng cụm từ' },
-    { id: 2, name: 'Flashcard từng cụm từ' },
-    { id: 3, name: 'Luyện phát âm từng cụm từ' },
-    { id: 4, name: 'Nói từ nghĩa Tiếng Việt' }
+    { id: 1, name: 'Nghe cụm từ' },
+    { id: 2, name: 'Flashcard' },
+    { id: 3, name: 'Luyện phát âm' },
+    { id: 4, name: 'Nói từ nghĩa' }
   ];
 
   const outputSteps = [
     { id: 5, name: 'Điền vào chỗ trống' },
-    { id: 6, name: 'Nghe hiểu câu Tiếng Việt' },
-    { id: 7, name: 'Luyện nói đoạn văn' },
+    { id: 6, name: 'Nghe hiểu' },
+    { id: 7, name: 'Nói đoạn văn' },
     { id: 8, name: 'Nói hoàn chỉnh' }
   ];
 
@@ -25,12 +25,12 @@ const StudyProgress = () => {
     <div className="mb-10">
       <div className="flex justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="bg-hamaspeak-blue/20 text-hamaspeak-blue text-xs font-semibold py-1 px-3 rounded-full animate-pulse">
+          <span className={`bg-hamaspeak-blue/20 text-hamaspeak-blue text-xs font-semibold py-1 px-3 rounded-full ${currentStep <= 4 ? 'animate-pulse' : ''}`}>
             Input
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="bg-hamaspeak-purple/20 text-hamaspeak-purple text-xs font-semibold py-1 px-3 rounded-full animate-pulse">
+          <span className={`bg-hamaspeak-purple/20 text-hamaspeak-purple text-xs font-semibold py-1 px-3 rounded-full ${currentStep > 4 ? 'animate-pulse' : ''}`}>
             Output
           </span>
         </div>
@@ -39,8 +39,8 @@ const StudyProgress = () => {
         {/* Progress line */}
         <div className="absolute h-1 top-4 left-0 right-0 bg-gray-200">
           <div 
-            className="h-full bg-gradient-to-r from-hamaspeak-blue to-hamaspeak-purple transition-all duration-300 ease-in-out"
-            style={{ width: `${(currentStep / allSteps.length) * 100}%` }}
+            className="h-full bg-gradient-to-r from-hamaspeak-blue to-hamaspeak-purple transition-all duration-500 ease-in-out"
+            style={{ width: `${((currentStep / allSteps.length) * 100)}%` }}
           ></div>
         </div>
         
@@ -55,7 +55,7 @@ const StudyProgress = () => {
                       ? 'bg-hamaspeak-blue text-white' 
                       : 'bg-hamaspeak-purple text-white' 
                     : 'bg-gray-200'
-                }`}
+                } ${currentStep === step.id ? 'scale-110 shadow-lg' : ''}`}
               >
                 {step.id}
               </div>

@@ -2,6 +2,11 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { TextAnalysisResult, analyzeText } from '@/services/textAnalyzer';
 
+export interface FlashcardState {
+  currentIndex: number;
+  isFlipped: boolean;
+}
+
 interface StudyContextType {
   currentText: string;
   setCurrentText: (text: string) => void;
@@ -11,6 +16,8 @@ interface StudyContextType {
   setCurrentStep: (step: number) => void;
   selectedVoice: string;
   setSelectedVoice: (voice: string) => void;
+  flashcardState: FlashcardState;
+  setFlashcardState: React.Dispatch<React.SetStateAction<FlashcardState>>;
   analyzeUserText: (text: string) => Promise<void>;
 }
 
@@ -26,6 +33,10 @@ export const StudyProvider = ({ children }: StudyProviderProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedVoice, setSelectedVoice] = useState('');
+  const [flashcardState, setFlashcardState] = useState<FlashcardState>({
+    currentIndex: 0,
+    isFlipped: false
+  });
 
   const analyzeUserText = async (text: string) => {
     try {
@@ -49,6 +60,8 @@ export const StudyProvider = ({ children }: StudyProviderProps) => {
     setCurrentStep,
     selectedVoice,
     setSelectedVoice,
+    flashcardState,
+    setFlashcardState,
     analyzeUserText,
   };
 
