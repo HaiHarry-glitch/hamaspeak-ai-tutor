@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Header from '@/components/Header';
 import HamaspeakLogo from '@/components/HamaspeakLogo';
-import { Mic, VolumeUp, CheckCircle, ArrowRight, User, Star, Sparkles } from 'lucide-react';
+import { Mic, Volume, CheckCircle, ArrowRight, User, Star, Sparkles } from 'lucide-react';
 
 const Index = () => {
   return (
@@ -49,7 +49,7 @@ const Index = () => {
                 <div className="absolute top-10 left-0 glass-card p-4 shadow-lg animate-float" style={{ animationDelay: '1s' }}>
                   <div className="flex items-center">
                     <div className="bg-hamaspeak-blue/10 p-2 rounded-full mr-3">
-                      <VolumeUp className="h-5 w-5 text-hamaspeak-blue" />
+                      <Volume className="h-5 w-5 text-hamaspeak-blue" />
                     </div>
                     <span className="font-medium">Luyện nghe</span>
                   </div>
@@ -89,7 +89,7 @@ const Index = () => {
           <div className="grid md:grid-cols-3 gap-8">
             <Card className="glass-card p-6 hover:shadow-xl transition-all">
               <div className="bg-hamaspeak-blue/10 p-4 rounded-full inline-flex mb-4">
-                <VolumeUp className="h-8 w-8 text-hamaspeak-blue" />
+                <Volume className="h-8 w-8 text-hamaspeak-blue" />
               </div>
               <h3 className="text-xl font-bold mb-3">Luyện nghe chuyên sâu</h3>
               <p>
