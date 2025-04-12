@@ -75,6 +75,11 @@
   body {
     @apply bg-gradient-to-br from-blue-50 to-purple-50 text-foreground min-h-screen;
   }
+
+  /* Smooth scrolling */
+  html {
+    @apply scroll-smooth;
+  }
 }
 
 @layer components {
@@ -109,12 +114,13 @@
   }
 }
 
+/* Enhanced animations */
 @keyframes shimmer {
   0% {
-    background-position: 100% 50%;
+    background-position: 200% 50%;
   }
   100% {
-    background-position: 0% 50%;
+    background-position: -100% 50%;
   }
 }
 
@@ -136,6 +142,15 @@
   }
 }
 
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
 @keyframes pulse-glow {
   0%, 100% {
     opacity: 1;
@@ -147,12 +162,70 @@
   }
 }
 
+@keyframes pulse-slow {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
 @keyframes spin-slow {
   from {
     transform: rotate(0deg);
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes ping-slow {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-right {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-left {
+  0% {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }
 
@@ -169,15 +242,52 @@
     animation: bounce-subtle 2s infinite;
   }
   
+  .animate-bounce-slow {
+    animation: bounce-slow 3s ease-in-out infinite;
+  }
+  
   .animate-pulse-glow {
     animation: pulse-glow 3s infinite;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
   }
   
   .animate-spin-slow {
     animation: spin-slow 10s linear infinite;
   }
   
+  .animate-ping-slow {
+    animation: ping-slow 3s ease-in-out infinite;
+  }
+  
+  .animate-slide-right {
+    animation: slide-right 0.6s ease-out forwards;
+  }
+  
+  .animate-slide-left {
+    animation: slide-left 0.6s ease-out forwards;
+  }
+  
+  .animate-gradient-shift {
+    animation: gradient-shift 8s ease-in-out infinite;
+    background-size: 200% 200%;
+  }
+  
   .delay-500 {
     animation-delay: 0.5s;
+  }
+  
+  .delay-1000 {
+    animation-delay: 1s;
+  }
+  
+  .delay-1500 {
+    animation-delay: 1.5s;
+  }
+  
+  .delay-2000 {
+    animation-delay: 2s;
   }
 }

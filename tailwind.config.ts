@@ -103,6 +103,16 @@ export default {
 						transform: 'translateY(0)'
 					}
 				},
+				'fade-out': {
+					'0%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					},
+					'100%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					}
+				},
 				'pulse-glow': {
 					'0%, 100%': {
 						opacity: '1',
@@ -147,7 +157,28 @@ export default {
 				},
 				'shimmer': {
 					'0%': { backgroundPosition: '200% 50%' },
-					'100%': { backgroundPosition: '0% 50%' }
+					'100%': { backgroundPosition: '-100% 50%' }
+				},
+				'gradient-x': {
+					'0%, 100%': { backgroundPosition: '0% 50%' },
+					'50%': { backgroundPosition: '100% 50%' }
+				},
+				'pulse-slow': {
+					'0%, 100%': { transform: 'scale(1)' },
+					'50%': { transform: 'scale(1.05)' }
+				},
+				'ping-slow': {
+					'0%': { transform: 'scale(1)', opacity: '1' },
+					'50%': { transform: 'scale(1.2)', opacity: '0.8' },
+					'100%': { transform: 'scale(1)', opacity: '1' }
+				},
+				'netflix-card-hover': {
+					'0%': { transform: 'scale(1)' },
+					'100%': { transform: 'scale(1.05)' }
+				},
+				'bounce-slow': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-5px)' }
 				}
 			},
 			animation: {
@@ -163,11 +194,17 @@ export default {
 				'slide-right': 'slide-right 0.4s ease-out',
 				'bounce-subtle': 'bounce-subtle 2s infinite ease-in-out',
 				'rotate-slow': 'rotate-slow 10s linear infinite',
-				'shimmer': 'shimmer 3s infinite'
+				'shimmer': 'shimmer 3s infinite',
+				'gradient-x': 'gradient-x 15s ease infinite',
+				'pulse-slow': 'pulse-slow 3s ease-in-out infinite',
+				'ping-slow': 'ping-slow 3s ease-in-out infinite',
+				'netflix-card-hover': 'netflix-card-hover 0.3s ease-in-out forwards',
+				'bounce-slow': 'bounce-slow 3s ease-in-out infinite'
 			},
 			backgroundImage: {
 				'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-				'hero-gradient': 'linear-gradient(to right bottom, #3B82F6, #8B5CF6, #14B8A6)'
+				'hero-gradient': 'linear-gradient(to right bottom, #3B82F6, #8B5CF6, #14B8A6)',
+				'netflix-card': 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.8) 100%)'
 			}
 		}
 	},
