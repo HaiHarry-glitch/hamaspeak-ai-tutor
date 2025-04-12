@@ -91,4 +91,93 @@
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-hamaspeak-blue via-hamaspeak-purple to-hamaspeak-teal;
   }
+  
+  .btn-glow {
+    @apply relative overflow-hidden;
+  }
+  
+  .btn-glow::after {
+    @apply content-[''] absolute inset-0 bg-white/20 rounded-lg transform scale-0 transition-transform duration-500 ease-out origin-center;
+  }
+  
+  .btn-glow:hover::after {
+    @apply scale-100;
+  }
+  
+  .feature-card {
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.9;
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@layer utilities {
+  .animate-shimmer {
+    animation: shimmer 3s infinite;
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-bounce-subtle {
+    animation: bounce-subtle 2s infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 3s infinite;
+  }
+  
+  .animate-spin-slow {
+    animation: spin-slow 10s linear infinite;
+  }
+  
+  .delay-500 {
+    animation-delay: 0.5s;
+  }
 }

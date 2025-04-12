@@ -16,7 +16,7 @@ export interface TextAnalysisResult {
 
 export const analyzeText = async (text: string): Promise<TextAnalysisResult> => {
   try {
-    // Segment the text into phrases
+    // Segment the text into phrases using a more intelligent algorithm
     const phrases = segmentTextIntoPhrases(text);
     
     // Process each phrase
