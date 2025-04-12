@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { StudyProvider, useStudy } from '@/contexts/StudyContext';
 import TextInput from '@/components/study/TextInput';
@@ -12,6 +11,7 @@ import Step7ParagraphSpeaking from '@/components/study/Step7ParagraphSpeaking';
 import Step8CompleteSpeaking from '@/components/study/Step8CompleteSpeaking';
 import VoiceSelector from '@/components/study/VoiceSelector';
 import StudyProgress from '@/components/study/StudyProgress';
+import AnalyzingProgress from '@/components/study/AnalyzingProgress';
 import Header from '@/components/Header';
 import { Loader2 } from 'lucide-react';
 
@@ -27,12 +27,7 @@ const StudyContent = () => {
           Luyện nói tiếng Anh cùng Hamaspeak
         </h1>
         
-        {isAnalyzing && (
-          <div className="flex flex-col items-center justify-center h-64">
-            <Loader2 className="h-12 w-12 animate-spin text-hamaspeak-purple mb-4" />
-            <p className="text-lg text-hamaspeak-purple animate-pulse">Đang phân tích văn bản của bạn...</p>
-          </div>
-        )}
+        {isAnalyzing && <AnalyzingProgress isAnalyzing={isAnalyzing} />}
         
         {currentStep > 0 && !isAnalyzing && (
           <div className="max-w-4xl mx-auto mb-8">

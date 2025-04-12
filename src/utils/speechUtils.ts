@@ -1,4 +1,3 @@
-
 // List of available voices from Web Speech API
 export const getAvailableVoices = () => {
   return new Promise<SpeechSynthesisVoice[]>((resolve) => {
@@ -53,6 +52,9 @@ interface RecognitionResult {
   confidence: number;
 }
 
+// Store the recognition instance globally so we can stop it later
+let recognitionInstance: any = null;
+
 // Start speech recognition
 export const startSpeechRecognition = (language: string = 'en-US'): Promise<RecognitionResult> => {
   return new Promise((resolve, reject) => {
@@ -64,14 +66,14 @@ export const startSpeechRecognition = (language: string = 'en-US'): Promise<Reco
     // Create speech recognition instance
     // @ts-ignore: Browser vendor prefixes
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
+    recognitionInstance = new SpeechRecognition();
 
-    recognition.lang = language;
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    recognitionInstance.lang = language;
+    recognitionInstance.continuous = false;
+    recognitionInstance.interimResults = false;
+    recognitionInstance.maxAlternatives = 1;
 
-    recognition.onresult = (event) => {
+    recognitionInstance.onresult = (event) => {
       const result = event.results[0][0];
       resolve({
         transcript: result.transcript,
@@ -79,13 +81,206 @@ export const startSpeechRecognition = (language: string = 'en-US'): Promise<Reco
       });
     };
 
-    recognition.onerror = (event) => {
+    recognitionInstance.onerror = (event) => {
       reject(`Error occurred in recognition: ${event.error}`);
     };
 
-    recognition.start();
+    recognitionInstance.start();
   });
 };
+
+// Stop speech recognition
+export const stopSpeechRecognition = () => {
+  if (recognitionInstance) {
+    try {
+      recognitionInstance.stop();
+    } catch (e) {
+      console.error("Error stopping speech recognition:", e);
+    }
+    recognitionInstance = null;
+  }
+};
+
+// Identify words that were mispronounced
+export const getWordErrors = (original: string, userTranscript: string): string[] => {
+  const normalizedOriginal = original.toLowerCase().replace(/[.,!?;:]/g, '');
+  const normalizedUser = userTranscript.toLowerCase().replace(/[.,!?;:]/g, '');
+  
+  const originalWords = normalizedOriginal.split(/\s+/);
+  const userWords = normalizedUser.split(/\s+/);
+  
+  // Find words in original that don't appear in user transcript
+  const missingWords = originalWords.filter(word => {
+    // Skip very short words or common articles
+    if (word.length <= 2 || ['the', 'and', 'for', 'in', 'on', 'to', 'of'].includes(word)) {
+      return false;
+    }
+    
+    // Check if this word or a similar one exists in the user transcript
+    return !userWords.some(userWord => {
+      // Check for exact match or high similarity
+      return userWord === word || 
+             calculateWordSimilarity(userWord, word) > 0.7;
+    });
+  });
+  
+  return missingWords;
+};
+
+// Calculate similarity between individual words
+function calculateWordSimilarity(word1: string, word2: string): number {
+  // If exact match
+  if (word1 === word2) return 1.0;
+  
+  // Calculate Levenshtein distance
+  const distance = levenshteinDistance(word1, word2);
+  const maxLength = Math.max(word1.length, word2.length);
+  
+  // Return similarity ratio
+  return 1 - (distance / maxLength);
+}
+
+// Get IPA (International Phonetic Alphabet) transcription for a word
+export const getIpaTranscription = async (word: string): Promise<string> => {
+  try {
+    // Mock IPA transcriptions for common English words
+    const commonIpaMap: {[key: string]: string} = {
+      // Basic words
+      "hello": "həˈloʊ",
+      "world": "wɜːrld",
+      "good": "ɡʊd",
+      "bad": "bæd",
+      "happy": "ˈhæpi",
+      "sad": "sæd",
+      "love": "lʌv",
+      "hate": "heɪt",
+      "life": "laɪf",
+      "death": "dɛθ",
+      
+      // Common verbs
+      "go": "ɡoʊ",
+      "come": "kʌm",
+      "eat": "iːt",
+      "drink": "drɪŋk",
+      "sleep": "sliːp",
+      "wake": "weɪk",
+      "talk": "tɔːk",
+      "walk": "wɔːk",
+      "run": "rʌn",
+      "jump": "dʒʌmp",
+      "see": "siː",
+      "hear": "hɪər",
+      "feel": "fiːl",
+      "think": "θɪŋk",
+      "know": "noʊ",
+      "understand": "ˌʌndərˈstænd",
+      "say": "seɪ",
+      "speak": "spiːk",
+      "give": "ɡɪv",
+      "take": "teɪk",
+      
+      // Pronouns
+      "i": "aɪ",
+      "you": "juː",
+      "he": "hiː",
+      "she": "ʃiː",
+      "it": "ɪt",
+      "we": "wiː",
+      "they": "ðeɪ",
+      
+      // Time-related
+      "time": "taɪm",
+      "day": "deɪ",
+      "night": "naɪt",
+      "year": "jɪər",
+      "month": "mʌnθ",
+      "week": "wiːk",
+      "hour": "ˈaʊər",
+      "minute": "ˈmɪnɪt",
+      "second": "ˈsɛkənd",
+      
+      // Common adjectives
+      "big": "bɪɡ",
+      "small": "smɔːl",
+      "hot": "hɑːt",
+      "cold": "koʊld",
+      "new": "nuː",
+      "old": "oʊld",
+      "young": "jʌŋ",
+      "beautiful": "ˈbjuːtɪfʊl",
+      "ugly": "ˈʌɡli",
+      "easy": "ˈiːzi",
+      "difficult": "ˈdɪfɪkəlt",
+      "important": "ɪmˈpɔːrtənt",
+      
+      // Common nouns
+      "man": "mæn",
+      "woman": "ˈwʊmən",
+      "child": "tʃaɪld",
+      "house": "haʊs",
+      "car": "kɑːr",
+      "book": "bʊk",
+      "water": "ˈwɔːtər",
+      "food": "fuːd",
+      "friend": "frɛnd",
+      "family": "ˈfæməli",
+      "school": "skuːl",
+      "work": "wɜːrk",
+      "money": "ˈmʌni",
+      "country": "ˈkʌntri",
+      "city": "ˈsɪti",
+      
+      // Vietnamese-specific challenge words
+      "vietnam": "ˈvjɛtˌnɑːm",
+      "hanoi": "hɑːˈnɔɪ",
+      "saigon": "saɪˈɡɒn",
+      "pho": "fə",
+      "banh mi": "bæn mi",
+      "solving": "ˈsɒlvɪŋ",
+      "taught": "tɔːt"
+    };
+    
+    // Check if we have a predefined IPA for this word
+    const normalizedWord = word.toLowerCase().trim();
+    if (commonIpaMap[normalizedWord]) {
+      return commonIpaMap[normalizedWord];
+    }
+    
+    // If not in our dictionary, use a fake delay to simulate API call
+    // In a real app, you would call an API here
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Return a simple phonetic representation as fallback
+    return generateSimpleIPA(normalizedWord);
+  } catch (error) {
+    console.error("Error getting IPA transcription:", error);
+    return generateSimpleIPA(word);
+  }
+};
+
+// Generate a simple IPA-like transcription (not real IPA but gives an impression)
+function generateSimpleIPA(word: string): string {
+  const phonemeMap: {[key: string]: string} = {
+    'a': 'æ', 'e': 'ɛ', 'i': 'ɪ', 'o': 'ɒ', 'u': 'ʌ',
+    'ai': 'aɪ', 'ay': 'eɪ', 'ea': 'iː', 'ee': 'iː', 'oo': 'uː',
+    'th': 'θ', 'sh': 'ʃ', 'ch': 'tʃ', 'ph': 'f', 'wh': 'w',
+    'j': 'dʒ', 'c': 'k'
+  };
+  
+  let ipa = word.toLowerCase();
+  
+  // Replace common phoneme patterns
+  Object.keys(phonemeMap).forEach(key => {
+    ipa = ipa.replace(new RegExp(key, 'g'), phonemeMap[key]);
+  });
+  
+  // Add stress mark to the first syllable for simplicity
+  if (ipa.length > 1) {
+    ipa = 'ˈ' + ipa;
+  }
+  
+  return ipa;
+}
 
 // Improved pronunciation scoring using more advanced algorithms
 export const calculatePronunciationScore = (original: string, userTranscript: string): number => {
@@ -201,10 +396,79 @@ function levenshteinDistance(a: string, b: string): number {
   return matrix[b.length][a.length];
 }
 
-// Free translation API function - using MyMemory
+// Free translation API function - using Google Translate API
 export const translateText = async (text: string, targetLang: string = 'vi'): Promise<string> => {
   try {
-    // Use a free translation API
+    // Use Google Translate API through RapidAPI
+    const url = 'https://google-translate1.p.rapidapi.com/language/translate/v2';
+    const options = {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        'Accept-Encoding': 'application/gzip',
+        'X-RapidAPI-Key': '3069f1f8e9mshbe08e6281e89ce8p1278f3jsncf63290a068a',
+        'X-RapidAPI-Host': 'google-translate1.p.rapidapi.com'
+      },
+      body: new URLSearchParams({
+        q: text,
+        source: 'en',
+        target: targetLang
+      })
+    };
+
+    const response = await fetch(url, options);
+    const data = await response.json();
+    
+    if (data && data.data && data.data.translations && data.data.translations[0]?.translatedText) {
+      return data.data.translations[0].translatedText;
+    }
+    
+    // Fallback to DeepL API if Google API fails
+    return translateWithDeepL(text, targetLang);
+  } catch (error) {
+    console.error("Google Translation API error:", error);
+    return translateWithDeepL(text, targetLang);
+  }
+};
+
+// DeepL Translation API (higher accuracy than MyMemory)
+const translateWithDeepL = async (text: string, targetLang: string = 'vi'): Promise<string> => {
+  try {
+    // Use DeepL API through RapidAPI
+    const url = 'https://deepl-translator.p.rapidapi.com/translate';
+    const options = {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'X-RapidAPI-Key': '3069f1f8e9mshbe08e6281e89ce8p1278f3jsncf63290a068a',
+        'X-RapidAPI-Host': 'deepl-translator.p.rapidapi.com'
+      },
+      body: JSON.stringify({
+        text: text,
+        source: 'en',
+        target: targetLang === 'vi' ? 'vi' : targetLang
+      })
+    };
+
+    const response = await fetch(url, options);
+    const data = await response.json();
+    
+    if (data && data.text) {
+      return data.text;
+    }
+    
+    // Fallback to MyMemory if DeepL API fails
+    return translateWithMyMemory(text, targetLang);
+  } catch (error) {
+    console.error("DeepL Translation API error:", error);
+    return translateWithMyMemory(text, targetLang);
+  }
+};
+
+// MyMemory Translation API (third fallback)
+const translateWithMyMemory = async (text: string, targetLang: string = 'vi'): Promise<string> => {
+  try {
+    // Use MyMemory free translation API
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`;
     const response = await fetch(url);
     const data = await response.json();
@@ -216,12 +480,12 @@ export const translateText = async (text: string, targetLang: string = 'vi'): Pr
     // Fallback to LibreTranslate if MyMemory fails
     return translateWithLibre(text, targetLang);
   } catch (error) {
-    console.error("Translation API error:", error);
+    console.error("MyMemory Translation API error:", error);
     return translateWithLibre(text, targetLang);
   }
 };
 
-// Fallback translation with LibreTranslate
+// LibreTranslate API (fourth fallback)
 const translateWithLibre = async (text: string, targetLang: string = 'vi'): Promise<string> => {
   try {
     // Use LibreTranslate public API
@@ -243,68 +507,158 @@ const translateWithLibre = async (text: string, targetLang: string = 'vi'): Prom
       return data.translatedText;
     }
     
-    // If all APIs fail, fall back to mock translation
-    return mockTranslate(text);
+    // If all APIs fail, fall back to enhanced mock translation
+    return enhancedMockTranslate(text);
   } catch (error) {
     console.error("LibreTranslate API error:", error);
-    return mockTranslate(text);
+    return enhancedMockTranslate(text);
   }
 };
 
-// Mock translation function as fallback
-function mockTranslate(text: string): string {
+// Enhanced mock translation function with more vocabulary as final fallback
+function enhancedMockTranslate(text: string): string {
   const translations: Record<string, string> = {
+    // Common phrases
     'hello': 'xin chào',
     'how are you': 'bạn khỏe không',
     'thank you': 'cảm ơn bạn',
     'goodbye': 'tạm biệt',
     'yes': 'vâng',
     'no': 'không',
+    
+    // Learning related
     'english': 'tiếng Anh',
     'vietnamese': 'tiếng Việt',
     'learning': 'đang học',
     'speaking': 'nói chuyện',
     'listening': 'lắng nghe',
-    'practice': 'luyện tập'
+    'practice': 'luyện tập',
+    'study': 'học tập',
+    'read': 'đọc',
+    'write': 'viết',
+    
+    // Common words
+    'good': 'tốt',
+    'bad': 'xấu',
+    'big': 'to lớn',
+    'small': 'nhỏ',
+    'fast': 'nhanh',
+    'slow': 'chậm',
+    'hot': 'nóng',
+    'cold': 'lạnh',
+    'new': 'mới',
+    'old': 'cũ',
+    
+    // Time expressions
+    'today': 'hôm nay',
+    'yesterday': 'hôm qua',
+    'tomorrow': 'ngày mai',
+    'now': 'bây giờ',
+    'later': 'sau này',
+    
+    // Additional useful phrases
+    'i understand': 'tôi hiểu',
+    'i don\'t understand': 'tôi không hiểu',
+    'please repeat': 'vui lòng nhắc lại',
+    'please speak slowly': 'vui lòng nói chậm',
+    'what does this mean': 'cái này có nghĩa là gì',
+    'where is': 'ở đâu',
+    'how much': 'bao nhiêu',
+    'how many': 'bao nhiêu',
+    'i need help': 'tôi cần giúp đỡ',
+    'is there': 'có',
+    'there is': 'có',
+    'there are': 'có'
   };
   
+  // Try exact match
   const lowerText = text.toLowerCase();
-  return translations[lowerText] || `${text} (đã dịch)`;
+  if (translations[lowerText]) {
+    return translations[lowerText];
+  }
+  
+  // Try to match partial phrases
+  for (const [key, value] of Object.entries(translations)) {
+    if (lowerText.includes(key)) {
+      return text.replace(new RegExp(key, 'gi'), value);
+    }
+  }
+  
+  return `${text} (chưa dịch được)`;
 }
 
-// Enhanced function to segment text into phrases using NLP-like approaches
+// Import compromise NLP library
+import nlp from 'compromise';
+
+// Enhanced function to segment text into phrases using NLP approaches with compromise
 export const segmentTextIntoPhrases = (text: string): string[] => {
-  // First, split text into sentences
-  const sentences = text
-    .replace(/([.!?])\s+/g, '$1|')
-    .split('|')
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
-  
   const phrases: string[] = [];
   
-  // These are common phrases that shouldn't be split
-  const commonPhrases = [
-    'for example', 'in addition', 'as well as', 'such as',
-    'in order to', 'due to the fact that', 'on the other hand',
-    'at the same time', 'in spite of', 'regardless of',
-    'in the meantime', 'in conclusion', 'as a result'
-  ];
+  // First, use compromise to parse the text
+  const doc = nlp(text);
   
-  // Process each sentence into phrases
+  // Extract sentences
+  const sentences = doc.sentences().out('array');
+  
+  // Process each sentence
   sentences.forEach(sentence => {
-    // For very short sentences, keep as is
+    // For very short sentences (less than 30 chars), keep as is
     if (sentence.length <= 30) {
       phrases.push(sentence);
       return;
     }
     
-    // Split by natural phrase boundaries
+    // Parse the sentence with compromise to extract meaningful chunks
+    const sentenceDoc = nlp(sentence);
+    
+    // Get noun phrases (usually the most meaningful chunks)
+    const nounPhrases = sentenceDoc.match('#Determiner? #Adjective* #Noun+').out('array');
+    
+    // Get verb phrases
+    const verbPhrases = sentenceDoc.match('#Adverb? #Verb+ #Particle?').out('array');
+    
+    // Get prepositional phrases
+    const prepPhrases = sentenceDoc.match('#Preposition #Determiner? #Adjective* #Noun+').out('array');
+    
+    // Get clauses (larger meaningful units)
+    const clauses = sentenceDoc.clauses().out('array');
+    
+    // Combine all the extracted phrases
+    const extractedPhrases = [...nounPhrases, ...verbPhrases, ...prepPhrases];
+    
+    // If we got meaningful phrases, use them
+    if (extractedPhrases.length > 0) {
+      // Filter out very short phrases and duplicates
+      const filteredPhrases = extractedPhrases
+        .filter(p => p.length > 5)
+        .filter((p, i, self) => self.indexOf(p) === i);
+      
+      if (filteredPhrases.length > 0) {
+        phrases.push(...filteredPhrases);
+        return;
+      }
+    }
+    
+    // If we got clauses, use them
+    if (clauses.length > 1) {
+      phrases.push(...clauses);
+      return;
+    }
+    
+    // Fallback: Use our original phrase boundary detection if NLP didn't give good results
     const phraseBoundaries = sentence
       .replace(/([,;:])\s+/g, '$1|')
       .split('|')
       .map(p => p.trim())
       .filter(p => p.length > 0);
+    
+    // These are common phrases that shouldn't be split
+    const commonPhrases = [
+      'for example', 'in addition', 'as well as', 'such as',
+      'in order to', 'due to the fact that', 'on the other hand',
+      'at the same time', 'in spite of', 'regardless of',
+      'in the meantime', 'in conclusion', 'as a result'
+    ];
     
     phraseBoundaries.forEach(phrase => {
       // For short phrases, keep as is
@@ -344,7 +698,18 @@ export const segmentTextIntoPhrases = (text: string): string[] => {
     });
   });
   
-  return phrases;
+  // Remove duplicates and ensure reasonable phrase length
+  return phrases
+    .filter((phrase, index, self) => 
+      // Remove duplicates
+      self.indexOf(phrase) === index && 
+      // Ensure minimum phrase length (at least 3 characters)
+      phrase.length > 3 &&
+      // Ensure maximum phrase length (at most 80 characters)
+      phrase.length <= 80
+    )
+    // Sort by length for better learning progression (shorter phrases first)
+    .sort((a, b) => a.length - b.length);
 };
 
 // Generate fill-in-the-blanks for a phrase with improved algorithm
