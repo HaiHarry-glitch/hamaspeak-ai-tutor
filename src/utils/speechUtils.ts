@@ -1,4 +1,3 @@
-
 // List of available voices from Web Speech API
 export const getAvailableVoices = () => {
   return new Promise<SpeechSynthesisVoice[]>((resolve) => {
@@ -113,7 +112,7 @@ export const getWordErrors = (original: string, userTranscript: string): string[
   // Find words in original that don't appear in user transcript
   const missingWords = originalWords.filter(word => {
     // Skip very short words or common articles
-    if (word.length <= 2 || ['the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'and', 'but', 'or', 'for', 'with', 'by'].includes(word)) {
+    if (word.length <= 2 || ['the', 'and', 'for', 'in', 'on', 'to', 'of'].includes(word)) {
       return false;
     }
     
