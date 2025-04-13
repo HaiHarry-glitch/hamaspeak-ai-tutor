@@ -1,3 +1,4 @@
+
 export interface EnhancedPronunciationScore {
   overallScore: number;
   accuracyScore: number;
@@ -40,10 +41,25 @@ export interface ProblemArea {
   examples: string[];
 }
 
-export const speakText = (text: string, voice?: SpeechSynthesisVoice): Promise<void> => {
+// Add missing function to get available voices
+export const getAvailableVoices = (): Promise<SpeechSynthesisVoice[]> => {
+  return new Promise((resolve) => {
+    const voices = speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      resolve(voices);
+    } else {
+      // Wait for voices to load
+      speechSynthesis.onvoiceschanged = () => {
+        resolve(speechSynthesis.getVoices());
+      };
+    }
+  });
+};
+
+export const speakText = (text: string, voice?: SpeechSynthesisVoice | null | string): Promise<void> => {
   return new Promise((resolve, reject) => {
     const utterance = new SpeechSynthesisUtterance(text);
-    if (voice) {
+    if (voice && typeof voice !== 'string') {
       utterance.voice = voice;
     }
     utterance.onend = () => resolve();
@@ -52,32 +68,73 @@ export const speakText = (text: string, voice?: SpeechSynthesisVoice): Promise<v
   });
 };
 
+interface SpeechRecognitionEvent extends Event {
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      }
+    }
+  }
+}
+
+interface SpeechRecognition extends EventTarget {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: Event) => void;
+  onend: () => void;
+  start: () => void;
+  stop: () => void;
+}
+
+declare var webkitSpeechRecognition: {
+  new(): SpeechRecognition;
+};
+
 export const startSpeechRecognition = (lang: string): Promise<{ transcript: string }> => {
   return new Promise((resolve, reject) => {
-    const recognition = new webkitSpeechRecognition();
-    recognition.lang = lang;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    try {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = lang;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
 
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      resolve({ transcript });
-    };
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        resolve({ transcript });
+      };
 
-    recognition.onerror = (event: any) => {
-      reject(new Error(`Speech recognition error: ${event.error}`));
-    };
+      recognition.onerror = (event: any) => {
+        reject(new Error(`Speech recognition error: ${event.error}`));
+      };
 
-    recognition.onend = () => {
-      // Resolve with an empty transcript if speech ends without capturing anything
-      resolve({ transcript: '' });
-    };
+      recognition.onend = () => {
+        // Resolve with an empty transcript if speech ends without capturing anything
+        resolve({ transcript: '' });
+      };
 
-    recognition.start();
+      recognition.start();
+    } catch (error) {
+      reject(new Error("Speech recognition not supported in this browser"));
+    }
   });
 };
 
-export const calculatePronunciationScore = (originalText: string, userTranscript: string): number => {
+// Add missing stopSpeechRecognition function
+export const stopSpeechRecognition = (): void => {
+  try {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.stop();
+  } catch (error) {
+    console.error("Speech recognition not supported in this browser");
+  }
+};
+
+export const calculatePronunciationScore = (originalText: string, userTranscript: string, language: string = 'en'): number => {
   const originalWords = originalText.toLowerCase().split(/\s+/);
   const transcriptWords = userTranscript.toLowerCase().split(/\s+/);
 
@@ -107,6 +164,52 @@ export const getRandomWords = async (count: number = 10): Promise<string[]> => {
     console.error("Could not fetch random words:", error);
     return [];
   }
+};
+
+// Add segmentTextIntoPhrases function
+export const segmentTextIntoPhrases = (text: string): string[] => {
+  // Split by punctuation and create manageable phrases
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const phrases: string[] = [];
+  
+  sentences.forEach(sentence => {
+    const trimmed = sentence.trim();
+    if (trimmed.length < 20) {
+      phrases.push(trimmed);
+    } else {
+      // Split longer sentences at commas or conjunctions
+      const subPhrases = trimmed.split(/,|;|\band\b|\bor\b|\bbut\b|\byet\b/).filter(p => p.trim().length > 0);
+      subPhrases.forEach(p => phrases.push(p.trim()));
+    }
+  });
+  
+  return phrases.filter(p => p.length > 0);
+};
+
+// Add translateText function (mock implementation)
+export const translateText = async (text: string): Promise<string> => {
+  // This is a mock implementation; in a real app, you'd call a translation API
+  const vietnameseMap: Record<string, string> = {
+    "hello": "xin chào",
+    "goodbye": "tạm biệt",
+    "thank you": "cảm ơn",
+    "welcome": "chào mừng",
+    "how are you": "bạn khỏe không",
+    "I am fine": "tôi khỏe",
+    "good morning": "chào buổi sáng",
+    "good afternoon": "chào buổi chiều",
+    "good evening": "chào buổi tối",
+    "good night": "chúc ngủ ngon"
+  };
+  
+  // Simple word-by-word translation for demo purposes
+  const lowerText = text.toLowerCase();
+  if (vietnameseMap[lowerText]) {
+    return vietnameseMap[lowerText];
+  }
+  
+  // For phrases not in our map, add "Tiếng Việt: " prefix to simulate translation
+  return `Tiếng Việt: ${text}`;
 };
 
 export const generateFillInTheBlanks = async (text: string): Promise<string[]> => {
@@ -222,3 +325,47 @@ export const analyzeWordPronunciation = (word: string, audioBlob: Blob): Promise
     }, 1000);
   });
 };
+
+// Add missing getWordErrors function
+export const getWordErrors = (originalText: string, userTranscript: string): { word: string; correct: boolean }[] => {
+  const originalWords = originalText.toLowerCase().split(/\s+/);
+  const transcriptWords = userTranscript.toLowerCase().split(/\s+/);
+  
+  return originalWords.map((word, index) => ({
+    word,
+    correct: transcriptWords[index] === word
+  }));
+};
+
+// Add missing getIpaTranscription function (mock implementation)
+export const getIpaTranscription = (text: string): Promise<string> => {
+  // Mock IPA transcription map for common words
+  const ipaMap: Record<string, string> = {
+    "hello": "həˈloʊ",
+    "world": "wɜrld",
+    "how": "haʊ",
+    "are": "ɑr",
+    "you": "ju",
+    "today": "təˈdeɪ",
+    "good": "gʊd",
+    "morning": "ˈmɔrnɪŋ",
+    "cat": "kæt",
+    "dog": "dɔg"
+  };
+  
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const words = text.toLowerCase().split(/\s+/);
+      const ipaWords = words.map(word => ipaMap[word] || word);
+      resolve(ipaWords.join(" "));
+    }, 500);
+  });
+};
+
+// Add window SpeechRecognition type
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
