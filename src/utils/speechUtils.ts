@@ -112,7 +112,7 @@ export const getWordErrors = (original: string, userTranscript: string): string[
   // Find words in original that don't appear in user transcript
   const missingWords = originalWords.filter(word => {
     // Skip very short words or common articles
-    if (word.length <= 2 || ['the', 'and', 'for', 'in', 'on', 'to', 'of'].includes(word)) {
+    if (word.length <= 2 || ['the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'and', 'but', 'or', 'for', 'with', 'by'].includes(word)) {
       return false;
     }
     
@@ -120,7 +120,7 @@ export const getWordErrors = (original: string, userTranscript: string): string[
     return !userWords.some(userWord => {
       // Check for exact match or high similarity
       return userWord === word || 
-             calculateWordSimilarity(userWord, word) > 0.7;
+             calculateWordSimilarity(word, userWord) > 0.7;
     });
   });
   
@@ -765,4 +765,605 @@ export const analyzeAssemblyAIPronunciation = async (userAudio: Blob, referenceT
   
   // Return a random score between 60 and 95
   return Math.floor(Math.random() * 36) + 60;
+};
+
+// New enhanced function to analyze pronunciation with detailed feedback
+export interface DetailedPronunciationFeedback {
+  overallScore: number;         // Overall score from 0-100
+  phonemeScores: PhonemeScore[];  // Score for each phoneme
+  stressScores: StressScore[];    // Score for rhythm and stress patterns
+  problemAreas: ProblemArea[];    // Areas that need improvement
+  improvementTips: string[];      // Tips for improving pronunciation
+}
+
+export interface PhonemeScore {
+  phoneme: string;   // The IPA phoneme
+  score: number;     // Score from 0-100
+  position: string;  // Where in the word (start, middle, end)
+  examples: string[];  // Example words with this phoneme
+}
+
+export interface StressScore {
+  word: string;      // The word being analyzed
+  correctStress: string;  // Correct stress pattern
+  userStress: string;     // User's stress pattern
+  score: number;     // Score from 0-100
+}
+
+export interface ProblemArea {
+  type: 'consonant' | 'vowel' | 'diphthong' | 'cluster' | 'stress' | 'rhythm' | 'intonation';
+  description: string;  // Description of the problem
+  examples: string[];   // Example words showing the problem
+  improvement: string;  // Suggestion for improvement
+}
+
+// Function to get detailed pronunciation feedback (enhanced API simulation)
+export const getDetailedPronunciationFeedback = async (
+  userAudio: Blob | string, 
+  referenceText: string
+): Promise<DetailedPronunciationFeedback> => {
+  // In a real implementation, you would:
+  // 1. Upload the audio to a speech analysis API
+  // 2. Request detailed pronunciation analysis
+  // 3. Parse and return structured feedback
+  
+  console.log('Detailed pronunciation API would be called here with audio and reference text');
+  console.log('Reference text:', referenceText);
+  
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 1200));
+  
+  // Extract words from reference text
+  const words = referenceText.trim().toLowerCase().split(/\s+/);
+  
+  // Generate simulated detailed feedback
+  const overallScore = Math.floor(Math.random() * 31) + 70; // Between 70-100
+  
+  // Common English phonemes that Vietnamese speakers struggle with
+  const challengingPhonemes = [
+    { phoneme: 'θ', examples: ['think', 'this', 'bath', 'breathe'] },  // "th" sound
+    { phoneme: 'ð', examples: ['this', 'that', 'then', 'weather', 'breathe'] }, // voiced "th"
+    { phoneme: 'r', examples: ['right', 'very', 'really', 'problem', 'great'] }, // English "r"
+    { phoneme: 'dʒ', examples: ['job', 'bridge', 'judge', 'edge', 'agent'] },   // "j" sound
+    { phoneme: 'z', examples: ['zoo', 'zero', 'dogs', 'easy', 'zone'] },        // "z" sound
+    { phoneme: 'ʃ', examples: ['she', 'ship', 'sure', 'ocean', 'special'] },    // "sh" sound
+    { phoneme: 'ʒ', examples: ['vision', 'pleasure', 'measure', 'beige'] },     // "zh" sound
+    { phoneme: 'v', examples: ['very', 'love', 'five', 'visit', 'save'] },      // "v" sound
+    { phoneme: 'eɪ', examples: ['say', 'main', 'make', 'face', 'day'] },        // long "a"
+    { phoneme: 'æ', examples: ['cat', 'bad', 'map', 'happy', 'flat'] },         // short "a"
+    { phoneme: 'ɛə', examples: ['air', 'there', 'chair', 'fair', 'care'] },     // "air" sound
+    { phoneme: 'aʊ', examples: ['now', 'house', 'down', 'proud', 'count'] }     // "ow" sound
+  ];
+  
+  // Generate phoneme scores
+  const phonemeScores: PhonemeScore[] = [];
+  // Randomly select 3-6 phonemes to analyze
+  const numPhonemes = Math.floor(Math.random() * 4) + 3;
+  const selectedIndices = new Set<number>();
+  while (selectedIndices.size < numPhonemes) {
+    selectedIndices.add(Math.floor(Math.random() * challengingPhonemes.length));
+  }
+  
+  // Create phoneme scores for selected phonemes
+  selectedIndices.forEach(idx => {
+    const phoneme = challengingPhonemes[idx];
+    const positions = ['initial', 'medial', 'final'];
+    phonemeScores.push({
+      phoneme: phoneme.phoneme,
+      score: Math.floor(Math.random() * 41) + 60, // 60-100
+      position: positions[Math.floor(Math.random() * positions.length)],
+      examples: phoneme.examples.slice(0, 3)
+    });
+  });
+  
+  // Generate stress scores
+  const stressScores: StressScore[] = [];
+  // Select 2-4 words to analyze for stress
+  const numStressWords = Math.floor(Math.random() * 3) + 2;
+  const wordsForStress = words.filter(w => w.length > 4);
+  
+  // If we have enough words to analyze
+  if (wordsForStress.length >= numStressWords) {
+    // Shuffle and take the first numStressWords
+    const shuffled = [...wordsForStress].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, numStressWords);
+    
+    // Create stress scores for selected words
+    selected.forEach(word => {
+      const stressPatterns = ['●○', '○●', '●○○', '○●○', '○○●', '●○○○', '○●○○', '○○●○', '○○○●'];
+      const correctStress = stressPatterns[Math.floor(Math.random() * (word.length > 2 ? 5 : 2))];
+      const userStress = Math.random() > 0.5 ? correctStress : stressPatterns[Math.floor(Math.random() * stressPatterns.length)];
+      
+      stressScores.push({
+        word: word,
+        correctStress: correctStress,
+        userStress: userStress,
+        score: correctStress === userStress ? 100 : Math.floor(Math.random() * 41) + 60
+      });
+    });
+  }
+  
+  // Generate problem areas
+  const problemAreas: ProblemArea[] = [];
+  const potentialProblems = [
+    {
+      type: 'consonant' as const,
+      description: 'Difficulty with "th" sound (θ/ð)',
+      examples: ['thank', 'they', 'both', 'breathe'],
+      improvement: 'Place your tongue between your teeth and blow air gently to make the "th" sound.'
+    },
+    {
+      type: 'consonant' as const,
+      description: 'Confusion between "l" and "r" sounds',
+      examples: ['light', 'right', 'play', 'pray'],
+      improvement: 'For "r", curl your tongue back slightly without touching the roof of your mouth'
+    },
+    {
+      type: 'vowel' as const,
+      description: 'Short vs. long vowel distinction',
+      examples: ['ship/sheep', 'bit/beat', 'pull/pool'],
+      improvement: 'Long vowels require more tension in your mouth and lips'
+    },
+    {
+      type: 'diphthong' as const,
+      description: 'Diphthong pronunciation issues',
+      examples: ['make', 'go', 'right', 'boy', 'now'],
+      improvement: 'Practice gliding from one vowel sound to another smoothly'
+    },
+    {
+      type: 'cluster' as const,
+      description: 'Consonant cluster simplification',
+      examples: ['strength', 'texts', 'worlds', 'sixths'],
+      improvement: 'Practice pronouncing each consonant distinctly without adding vowels between them'
+    },
+    {
+      type: 'stress' as const,
+      description: 'Word stress patterns',
+      examples: ['photograph/photographer/photographic', 'record (n)/record (v)'],
+      improvement: 'Listen carefully to stress patterns and practice with stress marking'
+    },
+    {
+      type: 'rhythm' as const,
+      description: 'Sentence rhythm and intonation',
+      examples: ['What did you DO yesterday?', 'What DID you do yesterday?'],
+      improvement: 'Record yourself speaking and compare with native speakers, focusing on rhythm'
+    },
+    {
+      type: 'intonation' as const,
+      description: 'Rising and falling intonation patterns',
+      examples: ['Are you coming? (rising)', 'Go home now. (falling)'],
+      improvement: 'Practice questions with rising intonation and statements with falling intonation'
+    }
+  ];
+  
+  // Select 2-3 problem areas
+  const numProblems = Math.floor(Math.random() * 2) + 2;
+  const problemIndices = new Set<number>();
+  while (problemIndices.size < numProblems) {
+    problemIndices.add(Math.floor(Math.random() * potentialProblems.length));
+  }
+  
+  // Add selected problems to feedback
+  problemIndices.forEach(idx => {
+    problemAreas.push(potentialProblems[idx]);
+  });
+  
+  // Generate improvement tips
+  const improvementTips = [
+    'Listen to native speakers and mimic their pronunciation',
+    'Record yourself speaking and compare with native speakers',
+    'Practice minimal pairs to distinguish similar sounds',
+    'Learn the International Phonetic Alphabet (IPA) to understand phonetic symbols',
+    'Focus on one sound at a time and practice daily',
+    'Use pronunciation apps that provide visual feedback',
+    'Work with a pronunciation coach or language tutor',
+    'Read aloud regularly to improve fluency and intonation',
+    'Practice tongue twisters to improve specific sounds',
+    'Watch English movies with subtitles and repeat phrases',
+    'Use a mirror to watch your mouth positions for different sounds',
+    'Learn about mouth, tongue and lip positions for accurate sound production'
+  ];
+  
+  // Shuffle and pick 3-5 tips
+  const shuffledTips = [...improvementTips].sort(() => 0.5 - Math.random());
+  const selectedTips = shuffledTips.slice(0, Math.floor(Math.random() * 3) + 3);
+  
+  // Return comprehensive pronunciation feedback
+  return {
+    overallScore,
+    phonemeScores,
+    stressScores,
+    problemAreas,
+    improvementTips: selectedTips
+  };
+};
+
+// Additional function to generate enhanced word-by-word pronunciation scores
+export interface WordPronunciationAnalysis {
+  word: string;
+  correctIPA: string;
+  userIPA: string;
+  score: number;
+  problemPhonemes: {
+    phoneme: string;
+    position: number;
+    correct: boolean;
+  }[];
+  feedbackTip: string;
+}
+
+export const analyzeWordPronunciation = async (
+  word: string,
+  userAudio: Blob | string
+): Promise<WordPronunciationAnalysis> => {
+  // In a real implementation, you would:
+  // 1. Get the correct IPA for the word
+  // 2. Extract the pronunciation from the user audio
+  // 3. Compare phoneme by phoneme
+  
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  // Get correct IPA
+  const correctIPA = await getIpaTranscription(word);
+  
+  // Simulate user's pronunciation with variations based on common Vietnamese speaker errors
+  const phonemes = correctIPA.split('');
+  let userIPA = '';
+  const problemPhonemes: {phoneme: string; position: number; correct: boolean}[] = [];
+  
+  // Common pronunciation substitutions for Vietnamese speakers
+  const substitutions: Record<string, string> = {
+    'θ': 't', // "th" becomes "t"
+    'ð': 'd', // voiced "th" becomes "d"
+    'v': 'b', // "v" becomes "b"
+    'dʒ': 'z', // "j" sound becomes "z"
+    'r': 'z', // "r" sometimes becomes "z"
+    'ʒ': 'z', // "zh" sound becomes "z"
+    'æ': 'e', // "æ" becomes "e"
+  };
+  
+  // Generate simulated user pronunciation with some errors
+  phonemes.forEach((phoneme, index) => {
+    // 30% chance of mispronunciation for challenging phonemes
+    if (substitutions[phoneme] && Math.random() < 0.3) {
+      userIPA += substitutions[phoneme];
+      problemPhonemes.push({
+        phoneme: phoneme,
+        position: index,
+        correct: false
+      });
+    } else {
+      userIPA += phoneme;
+      if (!/[ˈˌ']/.test(phoneme)) { // Don't count stress marks as correct phonemes
+        problemPhonemes.push({
+          phoneme: phoneme,
+          position: index,
+          correct: true
+        });
+      }
+    }
+  });
+  
+  // Calculate score based on correct phonemes
+  const correctCount = problemPhonemes.filter(p => p.correct).length;
+  const totalPhonemes = problemPhonemes.length;
+  const score = Math.round((correctCount / totalPhonemes) * 100);
+  
+  // Generate feedback tip based on mispronounced phonemes
+  let feedbackTip = '';
+  const incorrectPhonemes = problemPhonemes.filter(p => !p.correct);
+  
+  if (incorrectPhonemes.length > 0) {
+    const phoneticTips: Record<string, string> = {
+      'θ': 'Place your tongue between your teeth and blow air gently to make the "th" sound.',
+      'ð': 'Place your tongue between your teeth and vibrate your vocal cords for the voiced "th" sound.',
+      'v': 'Bring your upper teeth to your bottom lip and vibrate for the "v" sound, different from "b".',
+      'dʒ': 'Start with "d" then quickly move to "zh" for the "j" sound in "job".',
+      'r': 'Curl your tongue back slightly without touching the roof of your mouth for the English "r".',
+      'ʒ': 'Make a "sh" sound but vibrate your vocal cords for the "zh" sound in "vision".',
+      'æ': 'Open your mouth wider for the short "a" sound in "cat", different from "e" in "get".'
+    };
+    
+    // Get the first mispronounced phoneme with available tip
+    const firstError = incorrectPhonemes.find(p => phoneticTips[p.phoneme]);
+    if (firstError) {
+      feedbackTip = phoneticTips[firstError.phoneme];
+    } else {
+      feedbackTip = "Focus on listening and repeating this sound after a native speaker.";
+    }
+  } else {
+    feedbackTip = "Excellent pronunciation! Keep practicing to maintain your skill.";
+  }
+  
+  return {
+    word,
+    correctIPA,
+    userIPA,
+    score,
+    problemPhonemes,
+    feedbackTip
+  };
+};
+
+// Function to analyze sentence rhythm and intonation
+export interface SentenceRhythmAnalysis {
+  overallScore: number;
+  rhythmPatternCorrectness: number; // 0-100
+  intonationAccuracy: number;      // 0-100
+  speedAppropriateScore: number;   // 0-100
+  pausePatternScore: number;       // 0-100
+  feedback: string;
+  improvementSuggestions: string[];
+}
+
+export const analyzeSentenceRhythm = async (
+  sentence: string,
+  userAudio: Blob | string
+): Promise<SentenceRhythmAnalysis> => {
+  // In a real implementation, you would analyze rhythm, intonation, speed, and pauses
+  
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Generate random scores for different aspects
+  const rhythmPatternCorrectness = Math.floor(Math.random() * 31) + 70; // 70-100
+  const intonationAccuracy = Math.floor(Math.random() * 31) + 70;       // 70-100
+  const speedAppropriateScore = Math.floor(Math.random() * 31) + 70;    // 70-100
+  const pausePatternScore = Math.floor(Math.random() * 31) + 70;        // 70-100
+  
+  // Overall score is weighted average
+  const overallScore = Math.round(
+    (rhythmPatternCorrectness * 0.3) +
+    (intonationAccuracy * 0.3) +
+    (speedAppropriateScore * 0.2) +
+    (pausePatternScore * 0.2)
+  );
+  
+  // Generate feedback based on scores
+  let feedback = '';
+  if (overallScore >= 90) {
+    feedback = 'Your rhythm and intonation are excellent, very close to native-like speech.';
+  } else if (overallScore >= 80) {
+    feedback = 'Good rhythm and intonation patterns with minor areas for improvement.';
+  } else if (overallScore >= 70) {
+    feedback = 'You have decent rhythm but some areas need improvement, particularly in stress and intonation.';
+  } else {
+    feedback = 'Your rhythm patterns need significant improvement to sound more natural.';
+  }
+  
+  // Generate improvement suggestions
+  const suggestions = [
+    'Focus on stressing content words (nouns, verbs, adjectives, adverbs) more than function words.',
+    'Practice linking words together smoothly without unnatural pauses.',
+    'Record yourself reading aloud and compare with native speakers, focusing on rhythm.',
+    'Mark stressed syllables in sentences and practice emphasizing them.',
+    'Use a metronome to practice speaking with consistent timing.',
+    'Listen to news broadcasts and mimic the announcers\' speech patterns.',
+    'Speak along with audiobooks or podcasts to match natural speech patterns.',
+    'Practice rising intonation for questions and falling intonation for statements.',
+    'Record speeches or presentations and analyze your rhythm patterns.',
+    'Join a conversation group to practice natural rhythm in dialogue.'
+  ];
+  
+  // Select 3 random suggestions
+  const selectedSuggestions = [...suggestions]
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 3);
+  
+  return {
+    overallScore,
+    rhythmPatternCorrectness,
+    intonationAccuracy,
+    speedAppropriateScore,
+    pausePatternScore,
+    feedback,
+    improvementSuggestions: selectedSuggestions
+  };
+};
+
+// Now let's create a function to generate an enhanced composite score with all the feedback
+export interface EnhancedPronunciationScore {
+  overallScore: number;  // 0-100
+  accuracyScore: number; // Word/sound accuracy
+  fluencyScore: number;  // Smoothness of speech
+  rhythmScore: number;   // Rhythm and stress patterns
+  intonationScore: number; // Rising/falling patterns
+  problemSounds: { 
+    phoneme: string;
+    examples: string[];
+    description: string;
+  }[];
+  feedback: {
+    strengths: string[];
+    improvements: string[];
+    practiceExercises: string[];
+  };
+  wordByWordAnalysis?: WordPronunciationAnalysis[];
+}
+
+export const getEnhancedPronunciationScore = async (
+  text: string,
+  userAudio: Blob | string
+): Promise<EnhancedPronunciationScore> => {
+  // Simulate API call
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  // Generate base scores
+  const accuracyScore = Math.floor(Math.random() * 31) + 70;
+  const fluencyScore = Math.floor(Math.random() * 31) + 70;
+  const rhythmScore = Math.floor(Math.random() * 31) + 70;
+  const intonationScore = Math.floor(Math.random() * 31) + 70;
+  
+  // Overall score with weighted components
+  const overallScore = Math.round(
+    (accuracyScore * 0.35) +
+    (fluencyScore * 0.25) +
+    (rhythmScore * 0.2) +
+    (intonationScore * 0.2)
+  );
+  
+  // Common problematic sounds for Vietnamese speakers
+  const commonProblemSounds = [
+    {
+      phoneme: 'θ/ð',
+      examples: ['think', 'this', 'bath', 'breathe'],
+      description: 'The "th" sounds are often replaced with "t" or "d"'
+    },
+    {
+      phoneme: 'v',
+      examples: ['very', 'vacation', 'give', 'love'],
+      description: 'The "v" sound is often replaced with "b" or "f"'
+    },
+    {
+      phoneme: 'r',
+      examples: ['red', 'around', 'carry', 'world'],
+      description: 'The English "r" is often pronounced like the Vietnamese "r" (similar to "z")'
+    },
+    {
+      phoneme: 'l',
+      examples: ['light', 'play', 'fall', 'help'],
+      description: 'The "l" in final position may be unclear or dropped'
+    },
+    {
+      phoneme: 'dʒ',
+      examples: ['jump', 'job', 'edge', 'bridge'],
+      description: 'The "j" sound is often replaced with "z" or "ch"'
+    },
+    {
+      phoneme: 'æ',
+      examples: ['cat', 'map', 'happy', 'back'],
+      description: 'The short "a" sound is often replaced with "e"'
+    },
+    {
+      phoneme: 'ɪ vs iː',
+      examples: ['ship vs. sheep', 'hit vs. heat'],
+      description: 'Difficulty distinguishing between short and long "i" sounds'
+    },
+    {
+      phoneme: 'ending consonants',
+      examples: ['top', 'book', 'sad', 'bus'],
+      description: 'Final consonants may be dropped or unreleased'
+    }
+  ];
+  
+  // Randomly select 2-3 problem sounds
+  const numProblems = Math.floor(Math.random() * 2) + 2;
+  const shuffledProblems = [...commonProblemSounds].sort(() => 0.5 - Math.random());
+  const selectedProblems = shuffledProblems.slice(0, numProblems);
+  
+  // Generate feedback
+  const strengthsPool = [
+    'Good pronunciation of most vowel sounds',
+    'Clear articulation of most consonant sounds',
+    'Good command of word stress in most words',
+    'Consistent speech rate throughout the passage',
+    'Good use of pauses at appropriate points',
+    'Clear distinction between long and short vowels',
+    'Natural intonation patterns in questions',
+    'Good linking of words in phrases'
+  ];
+  
+  const improvementsPool = [
+    'Work on the "th" sounds by placing tongue between teeth',
+    'Practice distinguishing between "v" and "b" sounds',
+    'Focus on English "r" sound by curling tongue slightly',
+    'Maintain final consonants clearly at the end of words',
+    'Distinguish short and long vowel pairs like "ship/sheep"',
+    'Work on appropriate stress patterns in multi-syllable words',
+    'Practice linking words together more smoothly',
+    'Develop more natural intonation patterns for questions and statements',
+    'Focus on consonant clusters without adding extra vowels',
+    'Improve rhythm by emphasizing stressed syllables more clearly'
+  ];
+  
+  const practiceExercisesPool = [
+    'Practice minimal pairs: ship/sheep, bat/bet, not/note',
+    'Record yourself reading aloud and compare with native speakers',
+    'Use tongue twisters to improve specific sounds: "Three thin thinkers thinking thick thoughts"',
+    'Read aloud while exaggerating stress patterns',
+    'Shadow a native speaker by repeating immediately after them',
+    'Practice consonant clusters: strengths, texts, sixths, twelfths',
+    'Record TV news anchors and imitate their speech patterns',
+    'Use a mirror to check tongue and lip positions',
+    'Practice sentence stress by tapping on stressed words',
+    'Read poetry aloud to improve rhythm and flow'
+  ];
+  
+  // Select random feedback items
+  const strengths = [...strengthsPool].sort(() => 0.5 - Math.random()).slice(0, 2);
+  const improvements = [...improvementsPool].sort(() => 0.5 - Math.random()).slice(0, 3);
+  const practiceExercises = [...practiceExercisesPool].sort(() => 0.5 - Math.random()).slice(0, 3);
+  
+  // Optional word-by-word analysis for shorter texts
+  let wordByWordAnalysis: WordPronunciationAnalysis[] | undefined = undefined;
+  
+  if (text.split(/\s+/).length <= 10) {
+    // For short texts, generate word-by-word analysis
+    const words = text.trim().split(/\s+/);
+    wordByWordAnalysis = [];
+    
+    // Generate mock analysis for each word
+    for (const word of words) {
+      if (word.length < 2) continue;
+      const analysis = await analyzeWordPronunciation(word, userAudio);
+      wordByWordAnalysis.push(analysis);
+    }
+  }
+  
+  return {
+    overallScore,
+    accuracyScore,
+    fluencyScore,
+    rhythmScore,
+    intonationScore,
+    problemSounds: selectedProblems,
+    feedback: {
+      strengths,
+      improvements,
+      practiceExercises
+    },
+    wordByWordAnalysis
+  };
+};
+
+// Create a sophisticated pronunciation practice system for words
+export interface PronunciationPracticeSystem {
+  generateExerciseSet: (level: 'beginner' | 'intermediate' | 'advanced', focusArea?: string) => PronunciationExerciseSet;
+  evaluatePractice: (exercise: PronunciationExercise, userAudio: Blob | string) => Promise<PracticeEvaluation>;
+}
+
+export interface PronunciationExerciseSet {
+  level: 'beginner' | 'intermediate' | 'advanced';
+  focusArea: string;
+  exercises: PronunciationExercise[];
+  recommendedPracticeTime: string;
+}
+
+export interface PronunciationExercise {
+  id: string;
+  type: 'minimal-pair' | 'tongue-twister' | 'sentence' | 'dialogue' | 'word';
+  content: string;
+  targetPhonemes: string[];
+  correctIPA: string;
+  explanation: string;
+  difficultyLevel: 1 | 2 | 3 | 4 | 5;
+}
+
+export interface PracticeEvaluation {
+  exerciseId: string;
+  score: number;
+  accuracy: {
+    phoneme: string;
+    score: number;
+    feedback: string;
+  }[];
+  overallFeedback: string;
+  nextSteps: string[];
+}
+
+// Generate realistic IPA representation for any English word
+export const generateRealisticIPA = (word: string): string => {
+  // This is a simplified version - in a real app you would use a dictionary API
+  return getIpaTranscription(word);
 };
