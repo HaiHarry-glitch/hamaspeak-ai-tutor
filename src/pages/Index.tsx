@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,10 @@ import { Card } from '@/components/ui/card';
 import Header from '@/components/Header';
 import HamaspeakLogo from '@/components/HamaspeakLogo';
 import { Mic, Volume, CheckCircle, ArrowRight, User, Star, Sparkles, ChevronDown, Play } from 'lucide-react';
+
+interface HeaderProps {
+  className?: string;
+}
 
 const Index = () => {
   const [isScrolled, setIsScrolled] = useState(false);
