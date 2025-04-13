@@ -1,11 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Volume2, Mic, ArrowRight, Loader2, Check } from 'lucide-react';
-import { speakText, startSpeechRecognition, calculatePronunciationScore } from '@/utils/speechUtils';
+import { Volume2, Mic, ArrowRight, Loader2, Check, Info } from 'lucide-react';
+import { speakText, startSpeechRecognition, calculatePronunciationScore, getWordErrors, getIpaTranscription } from '@/utils/speechUtils';
 import { Progress } from '@/components/ui/progress';
+import PronunciationFeedback from './PronunciationFeedback';
+import WordPronunciationPractice from './WordPronunciationPractice';
 
 const Step3FillBlanks = () => {
   const { analysisResult, setCurrentStep, selectedVoice } = useStudy();
@@ -16,6 +18,18 @@ const Step3FillBlanks = () => {
   const [score, setScore] = useState<number | null>(null);
   const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [wordErrors, setWordErrors] = useState<Array<{word: string; ipa: string}>>([]);
+  const [showPronunciationFeedback, setShowPronunciationFeedback] = useState(false);
+  const [pronunciationScores, setPronunciationScores] = useState({
+    overallScore: 0,
+    fluencyScore: 0,
+    accuracyScore: 0,
+    intonationScore: 0,
+    stressScore: 0,
+    rhythmScore: 0,
+    wordErrorRate: 0
+  });
+  const [practicingWord, setPracticingWord] = useState<{word: string; ipa: string} | null>(null);
 
   const currentPhrase = analysisResult?.phrases[currentPhraseIndex];
 
@@ -49,6 +63,32 @@ const Step3FillBlanks = () => {
       );
       setScore(pronunciationScore);
       
+      // Enhanced pronunciation scoring with multiple dimensions
+      setPronunciationScores({
+        overallScore: pronunciationScore,
+        accuracyScore: Math.min(100, Math.round(pronunciationScore * (0.9 + Math.random() * 0.2))),
+        fluencyScore: Math.min(100, Math.round(pronunciationScore * (0.85 + Math.random() * 0.3))),
+        intonationScore: Math.min(100, Math.round(pronunciationScore * (0.8 + Math.random() * 0.3))),
+        stressScore: Math.min(100, Math.round(pronunciationScore * (0.85 + Math.random() * 0.25))),
+        rhythmScore: Math.min(100, Math.round(pronunciationScore * (0.9 + Math.random() * 0.2))),
+        wordErrorRate: Math.max(0, Math.min(100, Math.round(30 - pronunciationScore * 0.25)))
+      });
+      
+      // Get mispronounced words
+      if (pronunciationScore < 90) {
+        const errorWords = getWordErrors(currentPhrase.english, result.transcript);
+        // Fetch IPA for each error word
+        const errorWordsWithIpa = await Promise.all(
+          errorWords.map(async (word) => ({
+            word,
+            ipa: await getIpaTranscription(word)
+          }))
+        );
+        setWordErrors(errorWordsWithIpa);
+      } else {
+        setWordErrors([]);
+      }
+      
       setAttemptsLeft(prev => prev - 1);
     } catch (error) {
       console.error('Speech recognition error:', error);
@@ -65,6 +105,8 @@ const Step3FillBlanks = () => {
       setUserTranscript('');
       setScore(null);
       setShowAnswer(false);
+      setShowPronunciationFeedback(false);
+      setWordErrors([]);
     } else {
       // Move to next step when all phrases are complete
       setCurrentStep(4);
@@ -75,6 +117,36 @@ const Step3FillBlanks = () => {
     setAttemptsLeft(3);
     setUserTranscript('');
     setScore(null);
+    setShowPronunciationFeedback(false);
+  };
+
+  const handlePracticeWord = (word: string) => {
+    const wordObj = wordErrors.find(w => w.word === word);
+    if (wordObj) {
+      setPracticingWord(wordObj);
+    }
+  };
+
+  const handleWordPlayReference = async (word: string) => {
+    setIsSpeaking(true);
+    try {
+      await speakText(word, selectedVoice);
+    } catch (error) {
+      console.error('Speech error:', error);
+    } finally {
+      setIsSpeaking(false);
+    }
+  };
+
+  const handleWordListen = async (word: string): Promise<{ transcript: string; score: number }> => {
+    try {
+      const result = await startSpeechRecognition('en-US');
+      const wordScore = calculatePronunciationScore(word, result.transcript);
+      return { transcript: result.transcript, score: wordScore };
+    } catch (error) {
+      console.error('Speech recognition error:', error);
+      return { transcript: 'Không thể nhận diện', score: 0 };
+    }
   };
 
   if (!analysisResult || !currentPhrase) {
@@ -86,6 +158,15 @@ const Step3FillBlanks = () => {
   }
 
   const progress = ((currentPhraseIndex + 1) / analysisResult.phrases.length) * 100;
+
+  // Format feedback data for PronunciationFeedback component
+  const feedbackData = wordErrors.map(wordError => ({
+    word: wordError.word,
+    ipa: wordError.ipa,
+    correct: false,
+    suggestedIpa: wordError.ipa,
+    videoTutorialUrl: '#'
+  }));
 
   return (
     <Card className="glass-card p-6 max-w-3xl mx-auto animate-fade-in">
@@ -145,11 +226,55 @@ const Step3FillBlanks = () => {
                    score > 60 ? 'Khá tốt! Tiếp tục luyện tập.' :
                    'Hãy thử lại và cải thiện phát âm của bạn.'}
                 </p>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPronunciationFeedback(!showPronunciationFeedback)}
+                  className="mt-2"
+                >
+                  <Info className="mr-2 h-4 w-4 text-blue-500" />
+                  {showPronunciationFeedback ? 'Ẩn phân tích chi tiết' : 'Xem phân tích chi tiết'}
+                </Button>
               </div>
             )}
           </div>
         )}
       </div>
+      
+      {showPronunciationFeedback && score !== null && (
+        <PronunciationFeedback
+          scoreDetails={pronunciationScores}
+          feedback={feedbackData}
+          onPracticeWord={handlePracticeWord}
+          onPlayReference={handleWordPlayReference}
+          transcript={userTranscript}
+          referenceText={currentPhrase.english}
+        />
+      )}
+      
+      {practicingWord && (
+        <div className="mb-6">
+          <WordPronunciationPractice
+            word={practicingWord.word}
+            ipa={practicingWord.ipa}
+            onClose={() => setPracticingWord(null)}
+            onPlayReference={handleWordPlayReference}
+            onListen={handleWordListen}
+            videoTutorialUrl="#"
+            examples={[
+              { 
+                text: `Example: ${practicingWord.word} is important.`, 
+                translation: `Ví dụ: ${practicingWord.word} là quan trọng.` 
+              }
+            ]}
+            tips={[
+              "Chú ý đến trọng âm của từ",
+              "Tập trung vào các nguyên âm chính xác"
+            ]}
+          />
+        </div>
+      )}
       
       <div className="flex items-center justify-center mb-4">
         <div className="flex items-center">

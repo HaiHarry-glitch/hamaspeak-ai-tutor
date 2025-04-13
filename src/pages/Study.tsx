@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { StudyProvider, useStudy } from '@/contexts/StudyContext';
 import TextInput from '@/components/study/TextInput';
 import Step1Listening from '@/components/study/Step1Listening';
@@ -17,7 +17,13 @@ import Header from '@/components/Header';
 import { Loader2 } from 'lucide-react';
 
 const StudyContent = () => {
-  const { currentStep, isAnalyzing } = useStudy();
+  const { currentStep, isAnalyzing, selectedVoice } = useStudy();
+  
+  // Common function for pronunciation analysis that will be passed to components
+  const handleAnalyzePronunciation = async (text: string, audioBlob?: Blob) => {
+    // This function will be implemented in each component
+    console.log('Analyzing pronunciation for:', text);
+  };
 
   return (
     <div className="min-h-screen pb-10">
