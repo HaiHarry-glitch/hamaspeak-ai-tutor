@@ -7,7 +7,6 @@ import { speakText, startSpeechRecognition, calculatePronunciationScore, getWord
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 
-// Stats interface for storing cumulative performance data
 interface PerformanceStats {
   totalAttempts: number;
   averageScore: number;
@@ -38,13 +37,10 @@ const Step8CompleteSpeaking = () => {
 
   const fullText = analysisResult?.originalText || '';
   
-  // Enhance Vietnamese text rendering to be more cohesive and paragraph-like
   const vietnameseText = React.useMemo(() => {
     if (!analysisResult?.phrases.length) return '';
     
-    // Check if we have a complete Vietnamese translation in the analysis result
     if (analysisResult.sentences && analysisResult.sentences.length > 0) {
-      // If we have sentences, use those for a more coherent translation
       return analysisResult.sentences
         .map(sentence => sentence.vietnamese)
         .join(' ')
@@ -52,26 +48,18 @@ const Step8CompleteSpeaking = () => {
         .replace(/\(chưa dịch được\)/g, '');
     }
     
-    // Get all Vietnamese phrases
     const phrases = analysisResult.phrases.map(phrase => phrase.vietnamese);
     
-    // Process phrases to form a more natural paragraph
     return phrases
       .map(phrase => {
-        // Clean up any translation artifacts (remove parentheses and translation notes)
         return phrase.replace(/\(chưa dịch được\)/g, '').trim();
       })
-      // Join with proper spacing
       .join(' ')
-      // Fix double spaces
       .replace(/\s+/g, ' ')
-      // Make sure sentences end with periods if they don't have punctuation
       .replace(/([^\.\,\?\!\;\:])(\s+[A-Z])/g, '$1.$2')
-      // Add final period if needed
       .replace(/([^\.\,\?\!\;\:])$/, '$1.');
   }, [analysisResult]);
 
-  // Load saved stats from localStorage on component mount
   useEffect(() => {
     try {
       const savedStats = localStorage.getItem('hamaspeakPerformanceStats');
@@ -114,10 +102,8 @@ const Step8CompleteSpeaking = () => {
       );
       setScore(pronunciationScore);
       
-      // Get mispronounced words if score is below 95
       if (pronunciationScore < 95) {
         const errorWords = getWordErrors(fullText, result.transcript);
-        // Fetch IPA for each error word
         const errorWordsWithIpa = await Promise.all(
           errorWords.map(async (word) => ({
             word,
@@ -126,10 +112,8 @@ const Step8CompleteSpeaking = () => {
         );
         setWordErrors(errorWordsWithIpa);
         
-        // Update stats with mispronounced words
         updatePerformanceStats(pronunciationScore, errorWordsWithIpa);
       } else {
-        // Update stats without mispronunciations
         updatePerformanceStats(pronunciationScore, []);
       }
       
@@ -142,34 +126,26 @@ const Step8CompleteSpeaking = () => {
     }
   };
 
-  // Update performance statistics
   const updatePerformanceStats = (newScore: number, newErrors: Array<{word: string, ipa: string}>) => {
     setPerformanceStats(prevStats => {
-      // Update total attempts and average score
       const totalAttempts = prevStats.totalAttempts + 1;
       const totalScore = (prevStats.averageScore * prevStats.totalAttempts) + newScore;
       const averageScore = Math.round(totalScore / totalAttempts);
       
-      // Update highest score if new score is higher
       const highestScore = Math.max(prevStats.highestScore, newScore);
       
-      // Update mispronunciation count
       const mispronunciationCount = prevStats.mispronunciationCount + newErrors.length;
       
-      // Update mispronounced words list
       const updatedMispronuncedWords = [...prevStats.mispronuncedWords];
       
       newErrors.forEach(({word, ipa}) => {
-        // Check if word already exists in the list
         const existingWordIndex = updatedMispronuncedWords.findIndex(
           item => item.word.toLowerCase() === word.toLowerCase()
         );
         
         if (existingWordIndex !== -1) {
-          // Increment count for existing word
           updatedMispronuncedWords[existingWordIndex].count += 1;
         } else {
-          // Add new word to the list
           updatedMispronuncedWords.push({
             word,
             ipa,
@@ -178,10 +154,8 @@ const Step8CompleteSpeaking = () => {
         }
       });
       
-      // Sort by count (most frequent first)
       updatedMispronuncedWords.sort((a, b) => b.count - a.count);
       
-      // Keep only top 20 words
       const topMispronuncedWords = updatedMispronuncedWords.slice(0, 20);
       
       const newStats = {
@@ -193,7 +167,6 @@ const Step8CompleteSpeaking = () => {
         mispronuncedWords: topMispronuncedWords
       };
       
-      // Save to localStorage
       try {
         localStorage.setItem('hamaspeakPerformanceStats', JSON.stringify(newStats));
       } catch (error) {
@@ -205,7 +178,6 @@ const Step8CompleteSpeaking = () => {
   };
 
   const handleFinish = () => {
-    // Show congratulations screen instead of going back immediately
     setCongratsVisible(true);
   };
 
@@ -214,7 +186,7 @@ const Step8CompleteSpeaking = () => {
       title: 'Hoàn thành bài học!',
       description: 'Chúc mừng bạn đã hoàn thành tất cả các bước học.',
     });
-    setCurrentStep(0); // Back to text input
+    setCurrentStep(0);
   };
 
   const resetAttempts = () => {
@@ -224,7 +196,6 @@ const Step8CompleteSpeaking = () => {
     setWordErrors([]);
   };
 
-  // Generate performance grade based on overall stats
   const getPerformanceGrade = (): string => {
     const { averageScore, totalAttempts } = performanceStats;
     
@@ -246,7 +217,6 @@ const Step8CompleteSpeaking = () => {
     );
   }
 
-  // Congratulations screen with stats
   if (congratsVisible) {
     return (
       <Card className="glass-card p-6 max-w-3xl mx-auto animate-fade-in">
@@ -408,7 +378,6 @@ const Step8CompleteSpeaking = () => {
                    'Cần cải thiện thêm. Hãy tiếp tục luyện tập.'}
                 </p>
                 
-                {/* Display mispronounced words with IPA */}
                 {wordErrors.length > 0 && (
                   <div className="mt-3 p-3 bg-orange-50 rounded-md">
                     <h4 className="text-sm font-medium mb-2">Từ cần cải thiện:</h4>

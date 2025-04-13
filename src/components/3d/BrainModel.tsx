@@ -4,7 +4,17 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
-const BrainModel = ({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 }) => {
+interface BrainModelProps {
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  scale?: number;
+}
+
+const BrainModel: React.FC<BrainModelProps> = ({ 
+  position = [0, 0, 0], 
+  rotation = [0, 0, 0], 
+  scale = 1 
+}) => {
   const mesh = useRef<THREE.Mesh>(null);
   
   // Simple animation
@@ -18,8 +28,8 @@ const BrainModel = ({ position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 }) =
   return (
     <mesh 
       ref={mesh} 
-      position={position} 
-      rotation={rotation}
+      position={position as [number, number, number]} 
+      rotation={rotation as [number, number, number]}
       scale={scale}
     >
       <sphereGeometry args={[1, 32, 32]} />

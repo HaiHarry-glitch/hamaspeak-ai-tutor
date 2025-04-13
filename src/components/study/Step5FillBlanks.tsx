@@ -50,12 +50,10 @@ const Step5FillBlanks = () => {
     }
   };
 
-  // Function to handle speed change
   const handleSpeedChange = (value: number[]) => {
     setPlaybackRate(value[0]);
   };
   
-  // Function to render speed label
   const getSpeedLabel = (rate: number) => {
     if (rate <= 0.5) return 'Rất chậm';
     if (rate <= 0.75) return 'Chậm';
@@ -67,7 +65,6 @@ const Step5FillBlanks = () => {
   const handleListen = async () => {
     if (!currentSentence) return;
     
-    // Toggle recording if already listening
     if (isListening) {
       try {
         stopSpeechRecognition();
@@ -97,10 +94,8 @@ const Step5FillBlanks = () => {
       );
       setScore(pronunciationScore);
       
-      // Get mispronounced words if score is below 90
       if (pronunciationScore < 90) {
         const errorWords = getWordErrors(currentSentence.english, result.transcript);
-        // Fetch IPA for each error word
         const errorWordsWithIpa = await Promise.all(
           errorWords.map(async (word) => ({
             word,
@@ -119,321 +114,6 @@ const Step5FillBlanks = () => {
     }
   };
 
-  // Helper functions for detailed scoring
-  const isVowel = (char: string): boolean => {
-    return ['a', 'e', 'i', 'o', 'u'].includes(char.toLowerCase());
-  };
-
-  const calculateWordSimilarity = (word1: string, word2: string): number => {
-    // If exact match
-    if (word1 === word2) return 1.0;
-    
-    // Calculate Levenshtein distance
-    const distance = levenshteinDistance(word1, word2);
-    const maxLength = Math.max(word1.length, word2.length);
-    
-    // Return similarity ratio
-    return 1 - (distance / maxLength);
-  };
-
-  const levenshteinDistance = (str1: string, str2: string): number => {
-    const m = str1.length;
-    const n = str2.length;
-    
-    // Create a matrix of size (m+1) x (n+1)
-    const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
-    
-    // Initialize the matrix
-    for (let i = 0; i <= m; i++) dp[i][0] = i;
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
-    
-    // Fill the matrix
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
-        dp[i][j] = Math.min(
-          dp[i - 1][j] + 1,      // deletion
-          dp[i][j - 1] + 1,      // insertion
-          dp[i - 1][j - 1] + cost // substitution
-        );
-      }
-    }
-    
-    return dp[m][n];
-  };
-
-  const getWordPhonemes = (word: string): string[] => {
-    // Simple phoneme extraction (in a real app, you'd use a proper phonetic library)
-    const phonemes: string[] = [];
-    let i = 0;
-    
-    while (i < word.length) {
-      // Check for common digraphs and trigraphs
-      if (i < word.length - 2) {
-        const trigraph = word.substring(i, i + 3).toLowerCase();
-        if (['sch', 'tch', 'dge', 'eau', 'igh'].includes(trigraph)) {
-          phonemes.push(trigraph);
-          i += 3;
-          continue;
-        }
-      }
-      
-      if (i < word.length - 1) {
-        const digraph = word.substring(i, i + 2).toLowerCase();
-        if (['ch', 'sh', 'th', 'ph', 'wh', 'gh', 'ng', 'kn', 'wr', 'ck', 'qu', 'ai', 'ay', 'ea', 'ee', 'ei', 'ey', 'ie', 'oa', 'oo', 'ou', 'ow', 'ue', 'ui'].includes(digraph)) {
-          phonemes.push(digraph);
-          i += 2;
-          continue;
-        }
-      }
-      
-      // Single character phoneme
-      phonemes.push(word[i].toLowerCase());
-      i++;
-    }
-    
-    return phonemes;
-  };
-
-  const calculatePhonemeSimilarity = (phonemes1: string[], phonemes2: string[]): number => {
-    if (phonemes1.length === 0 || phonemes2.length === 0) return 0;
-    
-    let matches = 0;
-    const maxLength = Math.max(phonemes1.length, phonemes2.length);
-    
-    // Compare phonemes in corresponding positions, giving higher weight to beginning and end
-    for (let i = 0; i < Math.min(phonemes1.length, phonemes2.length); i++) {
-      if (phonemes1[i] === phonemes2[i]) {
-        // Weight beginning consonants and endings more heavily
-        const positionBonus = (i === 0 || i === phonemes1.length - 1) ? 1.5 : 1;
-        matches += positionBonus;
-      }
-    }
-    
-    return (matches / maxLength) * 100;
-  };
-
-  const calculateStressScore = (word1: string, word2: string): number => {
-    if (!word1 || !word2) return 0;
-    
-    // Very simple stress pattern analysis based on syllable count
-    const syllables1 = countSyllables(word1);
-    const syllables2 = countSyllables(word2);
-    
-    if (syllables1 === syllables2) {
-      return 100;
-    } else {
-      const diff = Math.abs(syllables1 - syllables2);
-      return Math.max(0, 100 - (diff * 25));
-    }
-  };
-
-  const countSyllables = (word: string): number => {
-    const text = word.toLowerCase();
-    let count = 0;
-    let prev = '';
-    
-    for (let i = 0; i < text.length; i++) {
-      const current = text[i];
-      
-      if (isVowel(current) && !isVowel(prev)) {
-        count++;
-      }
-      
-      prev = current;
-    }
-    
-    // Handle special cases
-    if (count === 0) count = 1;
-    if (text.endsWith('e') && !isVowel(text[text.length - 2]) && count > 1) count--;
-    if (text.endsWith('le') && !isVowel(text[text.length - 3]) && text.length > 2) count++;
-    
-    return count;
-  };
-
-  const calculateFinalSoundScore = (word1: string, word2: string): number => {
-    if (!word1 || !word2) return 0;
-    
-    // Extract final consonant clusters or vowel
-    const getEndSound = (word: string): string => {
-      let end = '';
-      let i = word.length - 1;
-      
-      // Get final consonant cluster
-      while (i >= 0 && !isVowel(word[i])) {
-        end = word[i] + end;
-        i--;
-      }
-      
-      // If no consonant at end, get final vowel
-      if (end === '' && i >= 0) {
-        end = word[i];
-      }
-      
-      return end;
-    };
-    
-    const end1 = getEndSound(word1);
-    const end2 = getEndSound(word2);
-    
-    if (end1 === end2) return 100;
-    
-    // Calculate similarity for partial matches
-    return calculateWordSimilarity(end1, end2) * 100;
-  };
-
-  // Calculate more detailed word scores for individual practice
-  const calculateDetailedWordScore = (targetWord: string, userWords: string[]): PracticeScoreDetails => {
-    // Direct match score
-    const exactMatch = userWords.includes(targetWord);
-    
-    // Find best match if no exact match
-    let bestSimilarity = 0;
-    let bestMatchedWord = '';
-    
-    if (!exactMatch) {
-      userWords.forEach(word => {
-        const similarity = calculateWordSimilarity(word, targetWord);
-        
-        // Extra check for final consonant match
-        const hasMatchingFinalConsonant = 
-          word.length > 0 && targetWord.length > 0 &&
-          !isVowel(word[word.length - 1]) && !isVowel(targetWord[targetWord.length - 1]) &&
-          word[word.length - 1] === targetWord[targetWord.length - 1];
-        
-        // Boost similarity for words with matching final consonants
-        const finalConsonantBonus = hasMatchingFinalConsonant ? 0.1 : 0;
-        const adjustedSimilarity = Math.min(1.0, similarity + finalConsonantBonus);
-        
-        if (adjustedSimilarity > bestSimilarity) {
-          bestSimilarity = adjustedSimilarity;
-          bestMatchedWord = word;
-        }
-      });
-    } else {
-      // For exact matches, set similarity to 1.0 (100%)
-      bestSimilarity = 1.0;
-      bestMatchedWord = targetWord;
-    }
-    
-    // Break down target word into phonetic components
-    const targetPhonemes = getWordPhonemes(targetWord);
-    
-    // Phonetic accuracy
-    let phoneticAccuracy = 0;
-    if (exactMatch) {
-      phoneticAccuracy = 100;
-    } else if (bestMatchedWord) {
-      // Estimated phonetic accuracy based on letter positions and phoneme patterns
-      const matchedPhonemes = getWordPhonemes(bestMatchedWord);
-      phoneticAccuracy = calculatePhonemeSimilarity(targetPhonemes, matchedPhonemes);
-    }
-    
-    // Cap phoneticAccuracy at 100%
-    phoneticAccuracy = Math.min(100, phoneticAccuracy);
-    
-    // Analyze stress pattern more accurately
-    const stressScore = calculateStressScore(targetWord, bestMatchedWord || '');
-    
-    // Check for final sound match specifically
-    const finalSoundScore = calculateFinalSoundScore(targetWord, bestMatchedWord || '');
-    
-    // Combine scores with proper weighting for pronunciation
-    // Higher weight to phonetic accuracy and final sounds for better evaluation
-    const weightedScore = Math.round(
-      (bestSimilarity * 30) + (phoneticAccuracy * 40) + (stressScore * 15) + (finalSoundScore * 15)
-    );
-    
-    // More strict conditions for high quality pronunciation
-    const allComponentsHighQuality = 
-      bestSimilarity >= 0.95 && 
-      phoneticAccuracy >= 92 && 
-      stressScore >= 92 && 
-      finalSoundScore >= 92;
-    
-    // Apply stronger penalties for lower quality pronunciation
-    let overallScore = weightedScore;
-    
-    // If not exact match and any component is problematic, apply penalties
-    if (!exactMatch) {
-      // Severe penalty for poor phonetic accuracy (most important factor)
-      if (phoneticAccuracy < 75) {
-        overallScore = Math.min(overallScore, 70); // Cap at 70% if phonetic accuracy is poor
-      } 
-      // Moderate penalty for poor overall match but decent phonetics
-      else if (bestSimilarity < 0.8 || finalSoundScore < 75) {
-        overallScore = Math.min(overallScore, 85); // Cap at 85% for moderate issues
-      }
-      // Minor penalty for slight issues
-      else if (!allComponentsHighQuality) {
-        overallScore = Math.min(overallScore, 95); // Cap at 95% for minor issues
-      }
-    }
-    
-    // Only allow 100% for exact matches with perfect pronunciation
-    if (overallScore > 99 && !exactMatch) {
-      overallScore = 99;
-    }
-    
-    // Ensure no score exceeds 100%
-    const finalOverallScore = Math.min(100, overallScore);
-    const finalSimilarityScore = Math.min(100, Math.round(bestSimilarity * 100));
-    
-    return {
-      overallScore: finalOverallScore,
-      exactMatch,
-      similarityScore: finalSimilarityScore,
-      phoneticAccuracy: Math.round(phoneticAccuracy),
-      bestMatchedWord: bestMatchedWord || '-',
-      syllableScore: Math.round(stressScore)
-    };
-  };
-
-  // Function to highlight mispronounced words in the displayed sentence
-  const highlightErrorsInSentence = (sentence: string) => {
-    if (!wordErrors.length) return sentence;
-    
-    let result = sentence;
-    
-    // Replace mispronounced words with highlighted versions
-    wordErrors.forEach(({ word }) => {
-      const regex = new RegExp(`\\b${word}\\b`, 'gi');
-      result = result.replace(regex, `<span class="text-red-500 font-bold">${word}</span>`);
-    });
-    
-    return result;
-  };
-
-  // Function to color-code words in the full sentence (green for correct, red for incorrect)
-  const highlightComparedSentence = (sentence: string) => {
-    if (!userTranscript || !sentence) return sentence;
-    
-    // Split the sentence into words
-    const words = sentence.split(/\s+/);
-    
-    // Create a map of error words for quick lookup
-    const errorMap = wordErrors.reduce((map, { word }) => {
-      map[word.toLowerCase()] = true;
-      return map;
-    }, {} as Record<string, boolean>);
-    
-    // Color code each word
-    const coloredWords = words.map(word => {
-      // Extract any punctuation
-      const punctuation = word.match(/[.,!?;:"]$/)?.[0] || '';
-      const cleanWord = word.replace(/[.,!?;:"]/g, '');
-      
-      if (errorMap[cleanWord.toLowerCase()]) {
-        return `<span class="text-red-500 font-bold">${cleanWord}${punctuation}</span>`;
-      } else {
-        return `<span class="text-green-500">${cleanWord}${punctuation}</span>`;
-      }
-    });
-    
-    return coloredWords.join(' ');
-  };
-
-  // Practice pronouncing a specific word
   const handlePracticeWord = async (wordObj: {word: string, ipa: string}) => {
     setPracticeWord(wordObj);
     setIsSpeaking(true);
@@ -441,58 +121,11 @@ const Step5FillBlanks = () => {
     setPracticeResult('');
     
     try {
-      // Speak the word slowly for practice
       await speakText(wordObj.word, selectedVoice, 0.8);
     } catch (error) {
       console.error('Speech error:', error);
     } finally {
       setIsSpeaking(false);
-    }
-  };
-
-  // Listen to the user practice a specific word
-  const handlePracticeWordListen = async () => {
-    if (!practiceWord) return;
-    
-    if (isPracticingSpeech) {
-      try {
-        stopSpeechRecognition();
-      } catch (error) {
-        console.error('Error stopping speech recognition:', error);
-      } finally {
-        setIsPracticingSpeech(false);
-      }
-      return;
-    }
-    
-    setIsPracticingSpeech(true);
-    setPracticeResult('');
-    setPracticeScore(null);
-    
-    try {
-      const result = await startSpeechRecognition('en-US');
-      const userWords = result.transcript.toLowerCase().split(/\s+/);
-      const practiceWordLower = practiceWord.word.toLowerCase();
-      
-      // Enhanced scoring for individual word practice
-      const scoreDetails = calculateDetailedWordScore(practiceWordLower, userWords);
-      
-      // Set practice result based on overall score
-      if (scoreDetails.overallScore > 85) {
-        setPracticeResult('correct');
-      } else if (scoreDetails.overallScore > 60) {
-        setPracticeResult('partial');
-      } else {
-        setPracticeResult('incorrect');
-      }
-      
-      // Store detailed score
-      setPracticeScore(scoreDetails);
-    } catch (error) {
-      console.error('Speech recognition error:', error);
-      setPracticeResult('error');
-    } finally {
-      setIsPracticingSpeech(false);
     }
   };
 
@@ -509,7 +142,6 @@ const Step5FillBlanks = () => {
       setPracticeScore(null);
       setShowPronunciationDetails(false);
     } else {
-      // Move to next step
       setCurrentStep(6);
     }
   };
@@ -604,7 +236,6 @@ const Step5FillBlanks = () => {
                   )}
                 </p>
                 
-                {/* Color-coded full sentence */}
                 <div className="mt-4 p-3 bg-gray-50 rounded-md">
                   <p className="font-medium mb-1 text-sm">Câu chuẩn:</p>
                   <p 
@@ -615,7 +246,6 @@ const Step5FillBlanks = () => {
                   />
                 </div>
                 
-                {/* Display mispronounced words with IPA */}
                 {wordErrors.length > 0 && (
                   <div className="mt-3 p-3 bg-orange-50 rounded-md">
                     <h4 className="text-sm font-medium mb-2">Từ cần cải thiện:</h4>
@@ -631,7 +261,6 @@ const Step5FillBlanks = () => {
                   </div>
                 )}
                 
-                {/* Practice Individual Words */}
                 {wordErrors.length > 0 && !practiceWord && (
                   <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                     <h4 className="text-sm font-medium mb-2">Luyện từng từ:</h4>
@@ -652,7 +281,6 @@ const Step5FillBlanks = () => {
                   </div>
                 )}
                 
-                {/* Word Practice Mode */}
                 {practiceWord && (
                   <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                     <div className="flex justify-between items-center mb-3">
@@ -703,7 +331,6 @@ const Step5FillBlanks = () => {
                       </Button>
                     </div>
                     
-                    {/* Practice Results with Detailed Score */}
                     {practiceResult && (
                       <div className="mt-3">
                         <div className={`p-2 rounded ${
@@ -795,7 +422,6 @@ const Step5FillBlanks = () => {
         )}
       </div>
       
-      {/* Playback Speed Control */}
       <div className="mb-6 bg-gray-50 p-4 rounded-lg">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium">Tốc độ phát âm:</span>
