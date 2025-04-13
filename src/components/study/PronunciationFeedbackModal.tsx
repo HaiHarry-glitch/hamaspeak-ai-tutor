@@ -32,7 +32,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Gauge,
-  Waveform,
+  AudioWaveform,
   Music
 } from 'lucide-react';
 import {

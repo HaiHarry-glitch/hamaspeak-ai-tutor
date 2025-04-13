@@ -24,6 +24,32 @@ interface StepProps {
   onAnalyzePronunciation: (text: string, audioBlob?: string | Blob) => Promise<void>;
 }
 
+// Declare component types to satisfy TypeScript
+declare module '@/components/study/Step1Listening' {
+  export default function Step1Listening(props: StepProps): JSX.Element;
+}
+declare module '@/components/study/Step2Flashcards' {
+  export default function Step2Flashcards(props: StepProps): JSX.Element;
+}
+declare module '@/components/study/Step3EnglishSpeaking' {
+  export default function Step3EnglishSpeaking(props: StepProps): JSX.Element;
+}
+declare module '@/components/study/Step4VietnameseSpeaking' {
+  export default function Step4VietnameseSpeaking(props: StepProps): JSX.Element;
+}
+declare module '@/components/study/Step5FillBlanks' {
+  export default function Step5FillBlanks(props: StepProps): JSX.Element;
+}
+declare module '@/components/study/Step6ListeningComprehension' {
+  export default function Step6ListeningComprehension(props: StepProps): JSX.Element;
+}
+declare module '@/components/study/Step7ParagraphSpeaking' {
+  export default function Step7ParagraphSpeaking(props: StepProps): JSX.Element;
+}
+declare module '@/components/study/Step8CompleteSpeaking' {
+  export default function Step8CompleteSpeaking(props: StepProps): JSX.Element;
+}
+
 const StudyContent = () => {
   const { currentStep, isAnalyzing, analysisResult, selectedVoice } = useStudy();
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
