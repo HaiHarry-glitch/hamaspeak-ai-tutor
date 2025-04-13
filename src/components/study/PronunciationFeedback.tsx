@@ -1,28 +1,20 @@
 
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import {
-  BarChart,
-  Mic,
-  Volume2,
-  ChevronDown,
-  ChevronUp,
   Info,
-  AlertTriangle,
-  CheckCircle,
   HelpCircle,
-  Share2,
-  Video
+  Volume2,
+  Lightbulb,
+  MoveDown,
+  ArrowRight,
+  Play,
+  CheckCircle2
 } from 'lucide-react';
-import { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Tooltip,
   TooltipContent,
@@ -30,29 +22,27 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// Types for pronunciation feedback
-export interface PronunciationScoreDetails {
+interface ScoreDetails {
   overallScore: number;
-  fluencyScore: number;
   accuracyScore: number;
+  fluencyScore: number;
   intonationScore: number;
   stressScore: number;
   rhythmScore: number;
-  wordErrorRate: number;
+  wordErrorRate?: number;
 }
 
-export interface PronunciationFeedback {
+interface WordFeedback {
   word: string;
   ipa: string;
   correct: boolean;
   suggestedIpa?: string;
-  audioUrl?: string;
   videoTutorialUrl?: string;
 }
 
 interface PronunciationFeedbackProps {
-  scoreDetails: PronunciationScoreDetails;
-  feedback: PronunciationFeedback[];
+  scoreDetails: ScoreDetails;
+  feedback: WordFeedback[];
   onPracticeWord?: (word: string) => void;
   onPlayReference?: (word: string) => void;
   transcript: string;
@@ -65,384 +55,361 @@ const PronunciationFeedback: React.FC<PronunciationFeedbackProps> = ({
   onPracticeWord,
   onPlayReference,
   transcript,
-  referenceText,
+  referenceText
 }) => {
-  const [showAllDetails, setShowAllDetails] = useState(false);
-  
-  // Calculate score category
-  const getScoreCategory = (score: number) => {
-    if (score >= 90) return { text: 'Xuất sắc', color: 'bg-green-500' };
-    if (score >= 80) return { text: 'Tốt', color: 'bg-green-400' };
-    if (score >= 70) return { text: 'Khá', color: 'bg-yellow-400' };
-    if (score >= 60) return { text: 'Trung bình', color: 'bg-orange-400' };
-    return { text: 'Cần cải thiện', color: 'bg-red-400' };
+  const [selectedTab, setSelectedTab] = useState("overview");
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return "bg-green-500";
+    if (score >= 80) return "bg-green-400";
+    if (score >= 70) return "bg-yellow-400";
+    if (score >= 60) return "bg-yellow-500";
+    if (score >= 50) return "bg-orange-400";
+    return "bg-red-400";
   };
 
-  const scoreCategory = getScoreCategory(scoreDetails.overallScore);
+  const getScoreText = (score: number) => {
+    if (score >= 90) return "Xuất sắc";
+    if (score >= 80) return "Tốt";
+    if (score >= 70) return "Khá";
+    if (score >= 60) return "Trung bình";
+    if (score >= 50) return "Cần cải thiện";
+    return "Yếu";
+  };
+
+  // Create comparison display between reference and user transcript
+  const compareTexts = () => {
+    const referenceWords = referenceText.split(/\s+/);
+    const userWords = transcript.split(/\s+/);
+    
+    // Find missed or incorrect words
+    const wordComparisons = referenceWords.map((refWord, i) => {
+      const cleanRefWord = refWord.toLowerCase().replace(/[.,!?;:]/g, '');
+      const userWord = userWords[i]?.toLowerCase().replace(/[.,!?;:]/g, '');
+      
+      // Check if words match
+      const isMatch = userWord === cleanRefWord;
+      
+      // Check if word is in user transcript somewhere
+      const isInUserTranscript = userWords.some(w => 
+        w.toLowerCase().replace(/[.,!?;:]/g, '') === cleanRefWord
+      );
+      
+      return {
+        reference: refWord,
+        user: userWord || '',
+        isMatch,
+        isInUserTranscript
+      };
+    });
+    
+    return wordComparisons;
+  };
+
+  const wordComparisons = compareTexts();
   
-  // Group feedback by correctness
-  const correctWords = feedback.filter(item => item.correct);
-  const incorrectWords = feedback.filter(item => !item.correct);
+  // Format pronunciation suggestions based on feedback
+  const getPronunciationTip = (word: string) => {
+    // Common difficult English sounds for Vietnamese speakers
+    const difficultSounds: Record<string, string> = {
+      'th': 'Đặt đầu lưỡi giữa răng, không phải /t/ hoặc /s/',
+      'ch': 'Phát âm như "tsh", không phải /c/ trong tiếng Việt',
+      'j': 'Phát âm như "dzh", không phải như /d/ trong tiếng Việt',
+      'r': 'Cuộn lưỡi lại, không phát âm như /z/ trong tiếng Việt',
+      'l': 'Đặt đầu lưỡi chạm vào mái vọng, không phát âm như /l/ trong tiếng Việt',
+      'v': 'Răng cắn nhẹ môi dưới, không phát âm như /j/ trong tiếng Việt',
+      'z': 'Như /s/ nhưng với sự rung của dây thanh quản',
+      'sh': 'Như /s/ nhưng lưỡi đặt xa hơn',
+      'w': 'Môi tròn như phát âm /u/, không phát như /qu/ trong tiếng Việt',
+      'ed': 'Chú ý cách phát âm đuôi -ed, có thể là /t/, /d/ hoặc /id/'
+    };
+    
+    // Check if word contains any difficult sounds
+    for (const [sound, tip] of Object.entries(difficultSounds)) {
+      if (word.toLowerCase().includes(sound)) {
+        return tip;
+      }
+    }
+    
+    return "Chú ý phát âm rõ ràng từng âm tiết";
+  };
 
   return (
-    <Card className="p-4 mt-4 border-2 border-gray-200 animate-fade-in">
-      <div className="mb-4">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-lg font-bold">Đánh giá phát âm của bạn</h3>
-          <Badge className={`${scoreCategory.color.replace('bg-', 'bg-opacity-80 bg-')} text-white`}>
-            {scoreCategory.text}
-          </Badge>
-        </div>
+    <Card className="p-4 mb-6 border-2 border-blue-100 animate-fade-in">
+      <h3 className="font-bold mb-2 flex items-center">
+        <Info className="h-4 w-4 mr-2 text-blue-500" />
+        Chi tiết phân tích phát âm
+      </h3>
+
+      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+        <TabsList className="grid grid-cols-3 mb-4">
+          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+          <TabsTrigger value="details">Chi tiết</TabsTrigger>
+          <TabsTrigger value="tips">Hướng dẫn</TabsTrigger>
+        </TabsList>
         
-        {/* Overall score section */}
-        <div className="bg-gray-50 p-3 rounded-lg mb-3">
-          <div className="flex justify-between mb-1">
+        <TabsContent value="overview" className="space-y-4">
+          <div className="flex items-center justify-between mb-2">
             <span className="font-medium">Điểm tổng thể:</span>
-            <span className="font-bold">{scoreDetails.overallScore}%</span>
+            <Badge variant="outline" className={`font-medium ${scoreDetails.overallScore >= 80 ? 'text-green-600' : scoreDetails.overallScore >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+              {scoreDetails.overallScore}% - {getScoreText(scoreDetails.overallScore)}
+            </Badge>
           </div>
-          <Progress 
-            value={scoreDetails.overallScore} 
-            className={`h-2.5 ${
-              scoreDetails.overallScore > 80 ? 'bg-green-100' : 
-              scoreDetails.overallScore > 60 ? 'bg-yellow-100' : 
-              'bg-orange-100'
-            }`}
-          />
-        </div>
-      </div>
-      
-      {/* Transcript comparison */}
-      <div className="bg-gray-50 p-3 rounded-lg mb-4 text-sm">
-        <div className="mb-2">
-          <span className="font-medium">Nội dung mẫu:</span>
-          <p className="pl-2 border-l-2 border-blue-400 ml-1 mt-1">
-            {referenceText}
-          </p>
-        </div>
-        <div>
-          <span className="font-medium">Nội dung của bạn:</span>
-          <p className="pl-2 border-l-2 border-green-400 ml-1 mt-1">
-            {transcript}
-          </p>
-        </div>
-      </div>
-      
-      {/* Detailed scores accordion */}
-      <Accordion type="single" collapsible className="mb-4">
-        <AccordionItem value="detailed-scores">
-          <AccordionTrigger className="text-sm font-medium">
-            Chi tiết điểm phát âm
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="grid gap-2 text-sm">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-1">
-                  <span>Độ chính xác</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs">Đánh giá mức độ chính xác của từng âm tiết khi phát âm</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <span className="font-medium">{scoreDetails.accuracyScore}%</span>
+          
+          <Progress value={scoreDetails.overallScore} className="h-2" />
+          
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <div className="text-sm flex justify-between">
+                <span>Độ chính xác</span>
+                <span>{scoreDetails.accuracyScore}%</span>
               </div>
-              <Progress value={scoreDetails.accuracyScore} className="h-1.5" />
-              
-              <div className="flex justify-between items-center mt-2">
-                <div className="flex items-center gap-1">
-                  <span>Ngữ điệu</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs">Đánh giá sự lên xuống giọng đúng chỗ</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <span className="font-medium">{scoreDetails.intonationScore}%</span>
-              </div>
-              <Progress value={scoreDetails.intonationScore} className="h-1.5" />
-              
-              <div className="flex justify-between items-center mt-2">
-                <div className="flex items-center gap-1">
-                  <span>Trọng âm</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs">Đánh giá việc nhấn trọng âm đúng vị trí trong từ và câu</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <span className="font-medium">{scoreDetails.stressScore}%</span>
-              </div>
-              <Progress value={scoreDetails.stressScore} className="h-1.5" />
-              
-              <div className="flex justify-between items-center mt-2">
-                <div className="flex items-center gap-1">
-                  <span>Nhịp điệu</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs">Đánh giá sự trôi chảy và nhịp điệu tự nhiên của câu nói</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <span className="font-medium">{scoreDetails.rhythmScore}%</span>
-              </div>
-              <Progress value={scoreDetails.rhythmScore} className="h-1.5" />
-              
-              <div className="flex justify-between items-center mt-2">
-                <div className="flex items-center gap-1">
-                  <span>Độ trôi chảy</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="h-3 w-3 text-gray-400" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs">Khả năng nói trôi chảy, không ngắt quãng</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <span className="font-medium">{scoreDetails.fluencyScore}%</span>
-              </div>
-              <Progress value={scoreDetails.fluencyScore} className="h-1.5" />
+              <Progress value={scoreDetails.accuracyScore} className={`h-1.5 ${getScoreColor(scoreDetails.accuracyScore)}`} />
             </div>
             
-            {/* Visual chart representation */}
-            <div className="flex justify-center mt-4">
-              <Button variant="outline" size="sm" className="text-xs flex items-center gap-1">
-                <BarChart className="h-3 w-3" /> Xem biểu đồ chi tiết
-              </Button>
+            <div>
+              <div className="text-sm flex justify-between">
+                <span>Độ trôi chảy</span>
+                <span>{scoreDetails.fluencyScore}%</span>
+              </div>
+              <Progress value={scoreDetails.fluencyScore} className={`h-1.5 ${getScoreColor(scoreDetails.fluencyScore)}`} />
             </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-      
-      {/* Word-level feedback */}
-      <div className="mb-4">
-        <div className="flex justify-between items-center mb-2">
-          <h4 className="font-medium text-sm">Phân tích từng từ</h4>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setShowAllDetails(!showAllDetails)}
-            className="h-7 text-xs"
-          >
-            {showAllDetails ? (
-              <><ChevronUp className="h-3 w-3 mr-1" /> Ẩn bớt</>
-            ) : (
-              <><ChevronDown className="h-3 w-3 mr-1" /> Xem tất cả</>
-            )}
-          </Button>
-        </div>
+            
+            <div>
+              <div className="text-sm flex justify-between">
+                <span>Ngữ điệu</span>
+                <span>{scoreDetails.intonationScore}%</span>
+              </div>
+              <Progress value={scoreDetails.intonationScore} className={`h-1.5 ${getScoreColor(scoreDetails.intonationScore)}`} />
+            </div>
+            
+            <div>
+              <div className="text-sm flex justify-between">
+                <span>Trọng âm</span>
+                <span>{scoreDetails.stressScore}%</span>
+              </div>
+              <Progress value={scoreDetails.stressScore} className={`h-1.5 ${getScoreColor(scoreDetails.stressScore)}`} />
+            </div>
+          </div>
+        </TabsContent>
         
-        {incorrectWords.length > 0 && (
-          <div className="mb-3">
-            <div className="flex items-center gap-1 mb-2">
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-              <span className="text-sm font-medium">Từ cần cải thiện ({incorrectWords.length}):</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
-              {incorrectWords.slice(0, showAllDetails ? undefined : 4).map((item, idx) => (
-                <div key={idx} className="bg-orange-50 p-2 rounded-md text-sm">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-medium">{item.word}</span>
-                    <div className="flex gap-1">
-                      {onPlayReference && (
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-5 w-5"
-                          onClick={() => onPlayReference(item.word)}
-                        >
-                          <Volume2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                      {item.videoTutorialUrl && (
-                        <Button size="icon" variant="ghost" className="h-5 w-5">
-                          <Video className="h-3 w-3 text-blue-500" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-col text-xs">
-                    <div className="flex items-center">
-                      <span className="mr-1">IPA đúng:</span>
-                      <span className="font-mono bg-white px-1 rounded">[{item.ipa}]</span>
-                    </div>
-                    {item.suggestedIpa && (
-                      <div className="flex items-center mt-1">
-                        <span className="mr-1">Bạn phát âm:</span>
-                        <span className="font-mono bg-white px-1 rounded">[{item.suggestedIpa}]</span>
-                      </div>
-                    )}
-                    {onPracticeWord && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="mt-2 h-7 text-xs"
-                        onClick={() => onPracticeWord(item.word)}
+        <TabsContent value="details">
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <h4 className="font-medium text-sm mb-2">So sánh phát âm:</h4>
+              <div className="space-y-2">
+                <div className="bg-white rounded p-2">
+                  <div className="text-xs text-gray-500 mb-1">Bản gốc:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {wordComparisons.map((comp, i) => (
+                      <span 
+                        key={`ref-${i}`}
+                        className={`px-1 rounded ${!comp.isInUserTranscript ? 'bg-red-100' : ''}`}
+                        title={!comp.isInUserTranscript ? "Từ này bị thiếu trong phát âm của bạn" : ""}
                       >
-                        <Mic className="h-3 w-3 mr-1" /> Luyện tập
-                      </Button>
-                    )}
+                        {comp.reference}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              ))}
+                
+                <div className="bg-white rounded p-2">
+                  <div className="text-xs text-gray-500 mb-1">Phát âm của bạn:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {transcript.split(/\s+/).map((word, i) => (
+                      <span 
+                        key={`user-${i}`} 
+                        className={`px-1 rounded ${
+                          !referenceText.toLowerCase().includes(word.toLowerCase().replace(/[.,!?;:]/g, '')) 
+                            ? 'bg-yellow-100' 
+                            : ''
+                        }`}
+                        title={
+                          !referenceText.toLowerCase().includes(word.toLowerCase().replace(/[.,!?;:]/g, ''))
+                            ? "Từ này không có trong bản gốc"
+                            : ""
+                        }
+                      >
+                        {word}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-3 flex text-xs">
+                <div className="flex items-center mr-3">
+                  <span className="inline-block w-3 h-3 bg-red-100 rounded mr-1"></span>
+                  <span>Từ bị thiếu</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="inline-block w-3 h-3 bg-yellow-100 rounded mr-1"></span>
+                  <span>Từ thừa/sai</span>
+                </div>
+              </div>
             </div>
-            {incorrectWords.length > 4 && !showAllDetails && (
-              <div className="text-center mt-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-xs"
-                  onClick={() => setShowAllDetails(true)}
-                >
-                  + Xem thêm {incorrectWords.length - 4} từ
-                </Button>
+            
+            {feedback.length > 0 && (
+              <div>
+                <h4 className="font-medium text-sm mb-2">Từ cần luyện tập:</h4>
+                <div className="space-y-2 max-h-36 overflow-y-auto">
+                  {feedback.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <div>
+                        <span className="font-medium">{item.word}</span>
+                        <span className="text-xs text-gray-500 ml-1">[{item.ipa}]</span>
+                      </div>
+                      <div className="flex gap-1">
+                        {onPlayReference && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-7 w-7 p-1"
+                            onClick={() => onPlayReference(item.word)}
+                          >
+                            <Volume2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        {onPracticeWord && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="h-7 text-xs"
+                            onClick={() => onPracticeWord(item.word)}
+                          >
+                            Luyện tập
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
-        )}
+        </TabsContent>
         
-        {correctWords.length > 0 && showAllDetails && (
-          <div className="mb-3">
-            <div className="flex items-center gap-1 mb-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span className="text-sm font-medium">Từ phát âm tốt ({correctWords.length}):</span>
+        <TabsContent value="tips">
+          <div className="space-y-3">
+            <div className="bg-yellow-50 p-3 rounded-lg">
+              <h4 className="font-medium flex items-center">
+                <Lightbulb className="h-4 w-4 mr-1 text-yellow-500" />
+                Gợi ý cải thiện phát âm
+              </h4>
+              
+              <ul className="mt-2 space-y-2 text-sm">
+                {scoreDetails.accuracyScore < 80 && (
+                  <li className="flex">
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-blue-500 shrink-0" />
+                    <span>Tập trung vào việc phát âm đúng từng từ, đặc biệt là những từ dài</span>
+                  </li>
+                )}
+                
+                {scoreDetails.fluencyScore < 80 && (
+                  <li className="flex">
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-blue-500 shrink-0" />
+                    <span>Luyện tập đọc to và trôi chảy hơn, hạn chế dừng giữa câu</span>
+                  </li>
+                )}
+                
+                {scoreDetails.intonationScore < 80 && (
+                  <li className="flex">
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-blue-500 shrink-0" />
+                    <span>Chú ý ngữ điệu lên xuống tự nhiên khi nói câu hỏi hoặc câu khẳng định</span>
+                  </li>
+                )}
+                
+                {scoreDetails.stressScore < 80 && (
+                  <li className="flex">
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-blue-500 shrink-0" />
+                    <span>Nhấn mạnh đúng âm tiết trong từ nhiều âm tiết (ví dụ: im-POR-tant, not IM-por-tant)</span>
+                  </li>
+                )}
+                
+                <li className="flex">
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-blue-500 shrink-0" />
+                  <span>Nghe và bắt chước người bản xứ nhiều lần trước khi thử nói</span>
+                </li>
+                
+                <li className="flex">
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-blue-500 shrink-0" />
+                  <span>Ghi âm và so sánh phát âm của bạn với bản gốc</span>
+                </li>
+              </ul>
             </div>
-            <div className="grid grid-cols-3 gap-2 max-h-24 overflow-y-auto">
-              {correctWords.map((item, idx) => (
-                <div key={idx} className="bg-green-50 p-2 rounded-md text-xs flex justify-between items-center">
-                  <span>{item.word}</span>
-                  <span className="font-mono text-green-600">[{item.ipa}]</span>
+            
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <h4 className="font-medium flex items-center">
+                <HelpCircle className="h-4 w-4 mr-1 text-blue-500" />
+                Tài nguyên bổ sung
+              </h4>
+              
+              <div className="mt-2 space-y-1 text-sm">
+                <div className="flex items-center">
+                  <Play className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
+                  <a 
+                    href="https://youtu.be/n4NVPg2kHv4" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Video: Cách phát âm tiếng Anh chuẩn
+                  </a>
                 </div>
-              ))}
+                
+                <div className="flex items-center">
+                  <Play className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
+                  <a 
+                    href="https://youtu.be/9M8akT2_WDI" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Video: Bí quyết phát âm đúng ngữ điệu
+                  </a>
+                </div>
+                
+                <div className="flex items-center">
+                  <MoveDown className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
+                  <a 
+                    href="https://www.bbc.co.uk/learningenglish/english/features/pronunciation" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    BBC Learning English: Pronunciation
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
-        )}
-      </div>
-      
-      {/* Suggestions for improvement */}
-      <Accordion type="single" collapsible className="mb-4">
-        <AccordionItem value="improvement-tips">
-          <AccordionTrigger className="text-sm font-medium">
-            <div className="flex items-center gap-1">
-              <Info className="h-4 w-4 text-blue-500" />
-              Gợi ý cải thiện
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-3">
-              {scoreDetails.accuracyScore < 80 && (
-                <div className="bg-blue-50 p-2 rounded-md">
-                  <h5 className="text-sm font-medium mb-1">Cải thiện độ chính xác:</h5>
-                  <ul className="text-xs list-disc pl-4 space-y-1">
-                    <li>Tập trung vào từng âm cơ bản, đặc biệt là các nguyên âm và phụ âm khó</li>
-                    <li>Dành thời gian luyện tập các từ đơn trước khi chuyển sang cụm từ dài</li>
-                    <li>Tập phân biệt các cặp âm thường bị nhầm lẫn như /p/-/b/, /t/-/d/, /s/-/sh/</li>
-                    <li>
-                      <Button variant="link" className="h-5 p-0 text-xs text-blue-600" asChild>
-                        <a href="#" target="_blank">Xem video hướng dẫn phát âm chuẩn</a>
-                      </Button>
-                    </li>
-                  </ul>
-                </div>
-              )}
-              
-              {scoreDetails.intonationScore < 80 && (
-                <div className="bg-blue-50 p-2 rounded-md">
-                  <h5 className="text-sm font-medium mb-1">Cải thiện ngữ điệu:</h5>
-                  <ul className="text-xs list-disc pl-4 space-y-1">
-                    <li>Lắng nghe và bắt chước ngữ điệu của người bản xứ</li>
-                    <li>Chú ý các từ được nhấn mạnh để thể hiện cảm xúc và ý nghĩa</li>
-                    <li>Ghi âm và so sánh ngữ điệu của bạn với bản gốc</li>
-                    <li>
-                      <Button variant="link" className="h-5 p-0 text-xs text-blue-600" asChild>
-                        <a href="#" target="_blank">Bài tập luyện ngữ điệu</a>
-                      </Button>
-                    </li>
-                  </ul>
-                </div>
-              )}
-              
-              {scoreDetails.rhythmScore < 80 && (
-                <div className="bg-blue-50 p-2 rounded-md">
-                  <h5 className="text-sm font-medium mb-1">Cải thiện nhịp điệu:</h5>
-                  <ul className="text-xs list-disc pl-4 space-y-1">
-                    <li>Tập nói theo nhịp, sử dụng phương pháp đánh nhịp bằng tay</li>
-                    <li>Chú ý đến việc nối âm giữa các từ (linking)</li>
-                    <li>Phân biệt giữa âm tiết nhấn mạnh và âm tiết nhẹ</li>
-                    <li>
-                      <Button variant="link" className="h-5 p-0 text-xs text-blue-600" asChild>
-                        <a href="#" target="_blank">Phương pháp luyện nhịp điệu tiếng Anh</a>
-                      </Button>
-                    </li>
-                  </ul>
-                </div>
-              )}
-              
-              {scoreDetails.stressScore < 80 && (
-                <div className="bg-blue-50 p-2 rounded-md">
-                  <h5 className="text-sm font-medium mb-1">Cải thiện trọng âm:</h5>
-                  <ul className="text-xs list-disc pl-4 space-y-1">
-                    <li>Học quy tắc trọng âm trong tiếng Anh (âm tiết đầu, giữa, cuối)</li>
-                    <li>Đánh dấu trọng âm trong văn bản trước khi đọc</li>
-                    <li>Chú ý các từ có trọng âm thay đổi theo ngữ cảnh</li>
-                    <li>
-                      <Button variant="link" className="h-5 p-0 text-xs text-blue-600" asChild>
-                        <a href="#" target="_blank">Bài tập về trọng âm từ và câu</a>
-                      </Button>
-                    </li>
-                  </ul>
-                </div>
-              )}
-              
-              {scoreDetails.fluencyScore < 80 && (
-                <div className="bg-blue-50 p-2 rounded-md">
-                  <h5 className="text-sm font-medium mb-1">Cải thiện độ trôi chảy:</h5>
-                  <ul className="text-xs list-disc pl-4 space-y-1">
-                    <li>Tập đọc to hàng ngày, bắt đầu từ chậm đến nhanh dần</li>
-                    <li>Sử dụng phương pháp bắt chước (shadowing) - nói theo đồng thời với bản gốc</li>
-                    <li>Tập trung vào cụm từ thay vì từng từ riêng lẻ</li>
-                    <li>
-                      <Button variant="link" className="h-5 p-0 text-xs text-blue-600" asChild>
-                        <a href="#" target="_blank">Phương pháp luyện nói trôi chảy</a>
-                      </Button>
-                    </li>
-                  </ul>
-                </div>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-      
-      {/* Practice recommendations */}
-      <div className="flex justify-end mt-3 gap-2">
-        <Button variant="outline" size="sm" className="text-xs flex items-center gap-1">
-          <Share2 className="h-3 w-3" /> Chia sẻ kết quả
-        </Button>
-        <Button className="text-xs flex items-center gap-1" size="sm">
-          <Video className="h-3 w-3" /> Xem video hướng dẫn
+        </TabsContent>
+      </Tabs>
+
+      <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-xs h-8">
+                <Info className="h-3 w-3 mr-1" />
+                Về phân tích phát âm
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p>Phân tích dựa trên so sánh phát âm của bạn với bản chuẩn, đánh giá nhiều yếu tố như độ chính xác, trọng âm và ngữ điệu.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        <Button size="sm" variant="outline" className="text-xs h-8 flex items-center">
+          <img 
+            src="/lovable-uploads/c3146207-9ae1-4262-99d7-da87abd01610.png" 
+            alt="Pronunciation guide" 
+            className="h-4 w-4 mr-1" 
+          />
+          Xem biểu đồ phát âm
+          <ArrowRight className="ml-1 h-3 w-3" />
         </Button>
       </div>
     </Card>
