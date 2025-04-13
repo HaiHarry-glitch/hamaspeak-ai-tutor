@@ -25,15 +25,15 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import {
-  SpeakerLoud,
+  Volume2,
   Mic,
   Info,
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
   Gauge,
-  WavePulse,
-  Music2
+  Waveform,
+  Music
 } from 'lucide-react';
 import {
   EnhancedPronunciationScore,
@@ -124,7 +124,7 @@ const PronunciationFeedbackModal: React.FC<PronunciationFeedbackModalProps> = ({
                   speechSynthesis.speak(utterance);
                 }}
               >
-                <SpeakerLoud className="mr-2 h-4 w-4" />
+                <Volume2 className="mr-2 h-4 w-4" />
                 Nghe mẫu
               </Button>
               
@@ -159,7 +159,14 @@ const PronunciationFeedbackModal: React.FC<PronunciationFeedbackModalProps> = ({
                         <Progress
                           value={item.score}
                           className="h-2"
-                          indicatorClassName={getProgressColor(item.score)}
+                          style={{ backgroundColor: 'rgba(0,0,0,0.1)' }} 
+                        />
+                        <div 
+                          className={`h-2 rounded-full -mt-2 ${getProgressColor(item.score)}`}
+                          style={{ 
+                            width: `${item.score}%`,
+                            transition: 'width 0.5s ease'
+                          }}
                         />
                       </div>
                     ))}
@@ -291,13 +298,13 @@ const PronunciationFeedbackModal: React.FC<PronunciationFeedbackModalProps> = ({
                   <Card className="p-4">
                     <h3 className="text-lg font-medium mb-3">Phân tích âm điệu</h3>
                     <div className="flex items-center mb-4">
-                      <WavePulse className="h-5 w-5 mr-2 text-purple-500" />
+                      <Waveform className="h-5 w-5 mr-2 text-purple-500" />
                       <span className="text-sm font-medium">Nhịp điệu: </span>
                       <span className="text-sm ml-2">{scoreData.rhythmScore}%</span>
                     </div>
                     
                     <div className="flex items-center mb-4">
-                      <Music2 className="h-5 w-5 mr-2 text-blue-500" />
+                      <Music className="h-5 w-5 mr-2 text-blue-500" />
                       <span className="text-sm font-medium">Ngữ điệu: </span>
                       <span className="text-sm ml-2">{scoreData.intonationScore}%</span>
                     </div>
@@ -329,7 +336,13 @@ const PronunciationFeedbackModal: React.FC<PronunciationFeedbackModalProps> = ({
                         <Progress 
                           value={scoreData.accuracyScore}
                           className="h-2"
-                          indicatorClassName={getProgressColor(scoreData.accuracyScore)}
+                        />
+                        <div 
+                          className={`h-2 rounded-full -mt-2 ${getProgressColor(scoreData.accuracyScore)}`}
+                          style={{ 
+                            width: `${scoreData.accuracyScore}%`,
+                            transition: 'width 0.5s ease'
+                          }}
                         />
                       </div>
                       
@@ -343,7 +356,13 @@ const PronunciationFeedbackModal: React.FC<PronunciationFeedbackModalProps> = ({
                         <Progress 
                           value={scoreData.fluencyScore}
                           className="h-2"
-                          indicatorClassName={getProgressColor(scoreData.fluencyScore)}
+                        />
+                        <div 
+                          className={`h-2 rounded-full -mt-2 ${getProgressColor(scoreData.fluencyScore)}`}
+                          style={{ 
+                            width: `${scoreData.fluencyScore}%`,
+                            transition: 'width 0.5s ease'
+                          }}
                         />
                       </div>
                     </div>
@@ -408,7 +427,7 @@ const PronunciationFeedbackModal: React.FC<PronunciationFeedbackModalProps> = ({
                                     speechSynthesis.speak(utterance);
                                   }}
                                 >
-                                  <SpeakerLoud className="h-3 w-3" />
+                                  <Volume2 className="h-3 w-3" />
                                 </Button>
                               </div>
                             ))}
@@ -484,7 +503,7 @@ const PronunciationFeedbackModal: React.FC<PronunciationFeedbackModalProps> = ({
                               speechSynthesis.speak(utterance);
                             }}
                           >
-                            <SpeakerLoud className="h-3 w-3 mr-1" />
+                            <Volume2 className="h-3 w-3 mr-1" />
                             Từ 1
                           </Button>
                           <Button 
@@ -495,7 +514,7 @@ const PronunciationFeedbackModal: React.FC<PronunciationFeedbackModalProps> = ({
                               speechSynthesis.speak(utterance);
                             }}
                           >
-                            <SpeakerLoud className="h-3 w-3 mr-1" />
+                            <Volume2 className="h-3 w-3 mr-1" />
                             Từ 2
                           </Button>
                           <Button size="sm">
@@ -533,7 +552,7 @@ const PronunciationFeedbackModal: React.FC<PronunciationFeedbackModalProps> = ({
                               speechSynthesis.speak(utterance);
                             }}
                           >
-                            <SpeakerLoud className="h-3 w-3 mr-1" />
+                            <Volume2 className="h-3 w-3 mr-1" />
                             Nghe mẫu
                           </Button>
                           <Button size="sm">

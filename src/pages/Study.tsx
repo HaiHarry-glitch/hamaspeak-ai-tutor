@@ -19,6 +19,11 @@ import Header from '@/components/Header';
 import { getEnhancedPronunciationScore, EnhancedPronunciationScore } from '@/utils/speechUtils';
 import { Loader2 } from 'lucide-react';
 
+// Define prop interfaces to fix type errors
+interface StepProps {
+  onAnalyzePronunciation: (text: string, audioBlob?: string | Blob) => Promise<void>;
+}
+
 const StudyContent = () => {
   const { currentStep, isAnalyzing, analysisResult, selectedVoice } = useStudy();
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
