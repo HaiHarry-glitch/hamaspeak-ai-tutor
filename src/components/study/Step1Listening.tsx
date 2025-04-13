@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Volume2, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 import { speakText, getAvailableVoices } from '@/utils/speechUtils';
 
-const Step1Listening = ({ onAnalyzePronunciation }: { onAnalyzePronunciation: (text: string, audioBlob?: string | Blob) => Promise<void> }) => {
+const Step1Listening = () => {
   const { analysisResult, setCurrentStep, selectedVoice } = useStudy();
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);

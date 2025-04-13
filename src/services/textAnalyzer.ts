@@ -1,5 +1,5 @@
 
-import { segmentTextIntoPhrases, translateText } from '@/utils/speechUtils';
+import { segmentTextIntoPhrases, translateText, generateFillInTheBlanks } from '@/utils/speechUtils';
 
 export interface AnalyzedPhrase {
   id: string;
@@ -36,13 +36,13 @@ export const analyzeText = async (text: string): Promise<TextAnalysisResult> => 
       const translation = await translateText(phrase);
       
       // Create fill-in-the-blanks version
-      const fillInBlanks = await generateFillInTheBlanks(phrase);
+      const fillInBlanks = generateFillInTheBlanks(phrase);
       
       analyzedPhrases.push({
         id: `phrase-${index}`,
         english: phrase,
         vietnamese: translation,
-        fillInBlanks: fillInBlanks[0] || phrase, // Take the first generated option
+        fillInBlanks: fillInBlanks,
         attempts: 0
       });
     }
@@ -59,13 +59,13 @@ export const analyzeText = async (text: string): Promise<TextAnalysisResult> => 
       const translation = await translateText(sentence);
       
       // Create fill-in-the-blanks version
-      const fillInBlanks = await generateFillInTheBlanks(sentence);
+      const fillInBlanks = generateFillInTheBlanks(sentence);
       
       analyzedSentences.push({
         id: `sentence-${index}`,
         english: sentence,
         vietnamese: translation,
-        fillInBlanks: fillInBlanks[0] || sentence,
+        fillInBlanks,
         attempts: 0
       });
     }
@@ -90,6 +90,3 @@ function extractSentences(text: string): string[] {
     .map(s => s.trim())
     .filter(s => s.length > 0);
 }
-
-// Import the function
-import { generateFillInTheBlanks } from '@/utils/speechUtils';
