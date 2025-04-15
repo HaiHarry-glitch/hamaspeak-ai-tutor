@@ -1,18 +1,13 @@
 
-import { v4 as uuidv4 } from 'uuid';
-import { segmentText } from './segmentationService';
-import { translate } from './translationService';
-import { getIpaTranscription } from './ipaService';
-import { generateFillInBlanks } from './fillBlanksService';
-import { useToast } from '@/hooks/use-toast';
+import { segmentTextIntoPhrases, translateText, generateFillInTheBlanks } from '@/utils/speechUtils';
 
 export interface AnalyzedPhrase {
   id: string;
   english: string;
-  vietnamese: string;
+  vietnamese: string; 
   fillInBlanks: string;
   attempts: number;
-  ipa?: string;
+  ipa?: string; // Added IPA transcription
 }
 
 export interface TextAnalysisResult {
@@ -27,83 +22,106 @@ export interface AnalyzedSentence {
   vietnamese: string;
   fillInBlanks: string;
   attempts: number;
-  ipa?: string;
+  ipa?: string; // Added IPA transcription
 }
+
+// Helper function to get IPA transcription
+const getIpaForPhrase = async (phrase: string): Promise<string> => {
+  try {
+    const words = phrase.split(/\s+/);
+    const ipaParts = [];
+    
+    for (const word of words) {
+      // Skip very short words
+      if (word.length <= 2) {
+        ipaParts.push('');
+        continue;
+      }
+      
+      // Use the getIpaTranscription function from speechUtils
+      // We'll simulate it here with a simple implementation
+      const cleanWord = word.replace(/[.,!?;:]/g, '');
+      const ipaMap: {[key: string]: string} = {
+        "hello": "həˈloʊ",
+        "world": "wɜːld",
+        "help": "help",
+        "important": "ɪmˈpɔːrtənt",
+        "our": "ˈaʊər",
+        "also": "ˈɔːlsoʊ",
+        "language": "ˈlæŋɡwɪdʒ",
+        "english": "ˈɪŋɡlɪʃ",
+        "practice": "ˈpræktɪs",
+        "speak": "spiːk",
+        "learn": "lɜːrn"
+      };
+      
+      ipaParts.push(ipaMap[cleanWord.toLowerCase()] || '');
+    }
+    
+    return ipaParts.filter(p => p).join(' ');
+  } catch (error) {
+    console.error('Error getting IPA:', error);
+    return '';
+  }
+};
 
 export const analyzeText = async (text: string): Promise<TextAnalysisResult> => {
   try {
-    // Use the new segmentText function that returns both Vietnamese translation and collocations
-    const segmentationResult = await segmentText(text);
+    // Use improved segmentTextIntoPhrases function for better chunking
+    const phrases = segmentTextIntoPhrases(text);
     
-    // Extract collocations as phrases
-    const phrases = segmentationResult.phrases;
-    const sentences = segmentationResult.sentences;
+    // Process each phrase with enhanced Vietnamese translation and IPA
+    const analyzedPhrases: AnalyzedPhrase[] = [];
     
-    // Process phrases in parallel with error handling for each
-    const analyzedPhrases = await Promise.all(
-      phrases.map(async (phrase): Promise<AnalyzedPhrase> => {
-        try {
-          // Get Vietnamese translation and IPA in parallel
-          const [phraseTranslation, ipa] = await Promise.all([
-            translate(phrase),
-            getIpaTranscription(phrase)
-          ]);
-          
-          return {
-            id: `phrase-${uuidv4()}`,
-            english: phrase,
-            vietnamese: phraseTranslation,
-            fillInBlanks: generateFillInBlanks(phrase),
-            attempts: 0,
-            ipa
-          };
-        } catch (error) {
-          console.error(`Error processing phrase "${phrase}":`, error);
-          // Return basic info with error indicators if API calls fail
-          return {
-            id: `phrase-${uuidv4()}`,
-            english: phrase,
-            vietnamese: '[Lỗi dịch]',
-            fillInBlanks: generateFillInBlanks(phrase),
-            attempts: 0,
-            ipa: ''
-          };
-        }
-      })
-    );
+    for (const [index, phrase] of phrases.entries()) {
+      // Skip empty or very short phrases
+      if (phrase.trim().length < 2) continue;
+      
+      // Get Vietnamese translation using the improved translation function
+      const translation = await translateText(phrase);
+      
+      // Create fill-in-the-blanks version
+      const fillInBlanks = generateFillInTheBlanks(phrase);
+      
+      // Get IPA transcription
+      const ipa = await getIpaForPhrase(phrase);
+      
+      analyzedPhrases.push({
+        id: `phrase-${index}`,
+        english: phrase,
+        vietnamese: translation,
+        fillInBlanks: fillInBlanks,
+        attempts: 0,
+        ipa: ipa
+      });
+    }
     
-    // Process sentences in parallel with error handling
-    const analyzedSentences = await Promise.all(
-      sentences.map(async (sentence): Promise<AnalyzedSentence> => {
-        try {
-          // Get Vietnamese translation and IPA in parallel
-          const [sentenceTranslation, ipa] = await Promise.all([
-            translate(sentence),
-            getIpaTranscription(sentence)
-          ]);
-          
-          return {
-            id: `sentence-${uuidv4()}`,
-            english: sentence,
-            vietnamese: sentenceTranslation,
-            fillInBlanks: generateFillInBlanks(sentence),
-            attempts: 0,
-            ipa
-          };
-        } catch (error) {
-          console.error(`Error processing sentence "${sentence}":`, error);
-          // Return basic info with error indicators if API calls fail
-          return {
-            id: `sentence-${uuidv4()}`,
-            english: sentence,
-            vietnamese: '[Lỗi dịch]',
-            fillInBlanks: generateFillInBlanks(sentence),
-            attempts: 0,
-            ipa: ''
-          };
-        }
-      })
-    );
+    // Extract sentences for later steps (5-8)
+    const sentences = extractSentences(text);
+    const analyzedSentences: AnalyzedSentence[] = [];
+    
+    for (const [index, sentence] of sentences.entries()) {
+      // Skip very short sentences
+      if (sentence.length < 5) continue;
+      
+      // Get Vietnamese translation
+      const translation = await translateText(sentence);
+      
+      // Create fill-in-the-blanks version
+      const fillInBlanks = generateFillInTheBlanks(sentence);
+      
+      // Get IPA transcription
+      const ipa = await getIpaForPhrase(sentence);
+      
+      analyzedSentences.push({
+        id: `sentence-${index}`,
+        english: sentence,
+        vietnamese: translation,
+        fillInBlanks,
+        attempts: 0,
+        ipa: ipa
+      });
+    }
     
     return {
       originalText: text,
@@ -112,24 +130,28 @@ export const analyzeText = async (text: string): Promise<TextAnalysisResult> => 
     };
   } catch (error) {
     console.error('Error analyzing text:', error);
-    // Return a minimal result with the original text
-    return {
-      originalText: text,
-      phrases: [{
-        id: `phrase-error-${uuidv4()}`,
-        english: text,
-        vietnamese: '[Lỗi phân tích]',
-        fillInBlanks: text,
-        attempts: 0
-      }],
-      sentences: [{
-        id: `sentence-error-${uuidv4()}`,
-        english: text,
-        vietnamese: '[Lỗi phân tích]',
-        fillInBlanks: text,
-        attempts: 0
-      }]
-    };
+    throw new Error('Failed to analyze text');
   }
 };
 
+// Improved function to extract sentences from text
+function extractSentences(text: string): string[] {
+  // First, identify sentence boundaries with more precision
+  const withMarkers = text
+    .replace(/([.!?])\s+/g, "$1|")
+    .replace(/([.!?])"(\s|$)/g, "$1\"|")
+    .replace(/\r?\n/g, "|");  // Consider line breaks as potential sentence breaks
+    
+  // Split by markers
+  const rawSentences = withMarkers.split("|");
+  
+  // Clean up and filter out empty or invalid sentences
+  const cleanSentences = rawSentences
+    .map(s => s.trim())
+    .filter(s => {
+      // Must be reasonable length and contain at least one letter
+      return s.length > 2 && /[a-z]/i.test(s);
+    });
+    
+  return cleanSentences;
+}

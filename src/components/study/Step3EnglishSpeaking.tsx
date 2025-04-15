@@ -1,14 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Volume2, Mic, ArrowRight, Loader2, Info, VolumeX, MicOff, Check, X, HelpCircle } from 'lucide-react';
-import { speakText, stopSpeechRecognition } from '@/utils/speechUtils';
+import { speakText, startSpeechRecognition, calculatePronunciationScore, stopSpeechRecognition, getWordErrors, getIpaTranscription } from '@/utils/speechUtils';
 import { Progress } from '@/components/ui/progress';
 import PronunciationFeedback from './PronunciationFeedback';
 import WordPronunciationPractice from './WordPronunciationPractice';
 import { useToast } from '@/hooks/use-toast';
-import { usePronunciationHandler } from './PronunciationHandler';
 
 interface Step3EnglishSpeakingProps {
   onAnalyzePronunciation?: (text: string, audioBlob?: Blob) => Promise<any>;
@@ -20,6 +20,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   const { analysisResult, setCurrentStep, selectedVoice } = useStudy();
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
   const [scoreDetails, setScoreDetails] = useState<any>(null);
   const [attemptsLeft, setAttemptsLeft] = useState(3);
@@ -27,7 +28,6 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   const [wordErrors, setWordErrors] = useState<Array<{word: string; ipa: string}>>([]);
   const [practicingWord, setPracticingWord] = useState<{word: string; ipa: string} | null>(null);
   const { toast } = useToast();
-  const { isProcessing: isListening, analyzePronunciation } = usePronunciationHandler();
 
   const currentPhrase = analysisResult?.phrases[currentPhraseIndex];
 
@@ -59,19 +59,65 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   const handleListen = async () => {
     if (isListening || !currentPhrase) return;
     
+    setIsListening(true);
     setUserTranscript('');
     setScoreDetails(null);
     setShowFeedback(false);
     
-    const result = await analyzePronunciation(currentPhrase.english, (result) => {
+    try {
+      const result = await startSpeechRecognition('en-US');
       setUserTranscript(result.transcript);
-      setScoreDetails(result.scoreDetails);
-      setWordErrors(result.errorWords);
+      
+      // Use the enhanced pronunciation scoring
+      const scores = calculatePronunciationScore(
+        currentPhrase.english, 
+        result.transcript
+      );
+      
+      // Set the detailed score breakdown
+      setScoreDetails({
+        overallScore: scores.overallScore,
+        accuracyScore: scores.accuracyScore,
+        fluencyScore: scores.fluencyScore, 
+        intonationScore: scores.intonationScore,
+        stressScore: scores.stressScore,
+        rhythmScore: Math.round((scores.fluencyScore + scores.intonationScore) / 2), // Derived score
+        wordErrorRate: 100 - scores.accuracyScore
+      });
+      
+      // Get words with pronunciation problems
+      if (scores.overallScore < 90) {
+        const errorWords = scores.missedWords.concat(scores.mispronunciations.map(m => m.split(' → ')[0]));
+        
+        // Fetch IPA for each error word
+        const errorWordsWithIpa = await Promise.all(
+          errorWords.map(async (word) => ({
+            word,
+            ipa: await getIpaTranscription(word)
+          }))
+        );
+        
+        setWordErrors(errorWordsWithIpa);
+      } else {
+        setWordErrors([]);
+      }
+      
       setAttemptsLeft(prev => prev - 1);
-    });
-    
-    if (result && onAnalyzePronunciation) {
-      await onAnalyzePronunciation(currentPhrase.english);
+      
+      // Call external analysis handler if provided
+      if (onAnalyzePronunciation) {
+        await onAnalyzePronunciation(currentPhrase.english);
+      }
+    } catch (error) {
+      console.error('Speech recognition error:', error);
+      toast({
+        title: 'Lỗi nhận diện giọng nói',
+        description: 'Không thể nhận diện giọng nói. Vui lòng đảm bảo microphone đang hoạt động và thử lại.',
+        variant: 'destructive'
+      });
+      setUserTranscript('');
+    } finally {
+      setIsListening(false);
     }
   };
 
@@ -115,11 +161,14 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   };
 
   const handleWordListen = async (word: string): Promise<{ transcript: string; score: number }> => {
-    const result = await analyzePronunciation(word);
-    if (result) {
-      return { transcript: result.transcript, score: result.scoreDetails.overallScore };
+    try {
+      const result = await startSpeechRecognition('en-US');
+      const wordScore = calculatePronunciationScore(word, result.transcript).overallScore;
+      return { transcript: result.transcript, score: wordScore };
+    } catch (error) {
+      console.error('Speech recognition error:', error);
+      return { transcript: 'Không thể nhận diện', score: 0 };
     }
-    return { transcript: 'Không thể nhận diện', score: 0 };
   };
 
   if (!analysisResult || !currentPhrase) {
