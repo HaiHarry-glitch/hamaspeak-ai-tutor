@@ -1,8 +1,6 @@
 
 import * as nlp from 'compromise';
 import { v4 as uuidv4 } from 'uuid';
-import { fetchWithTimeout } from '@/utils/apiUtils';
-import { translate } from '@/services/translationService';
 
 export interface AnalyzedPhrase {
   id: string;
@@ -28,32 +26,14 @@ export interface AnalyzedSentence {
   ipa?: string;
 }
 
-// Function to extract sentences from text
-export function extractSentences(text: string): string[] {
-  // First, identify sentence boundaries with more precision
-  const withMarkers = text
-    .replace(/([.!?])\s+/g, "$1|")
-    .replace(/([.!?])"(\s|$)/g, "$1\"|")
-    .replace(/\r?\n/g, "|");  // Consider line breaks as potential sentence breaks
-    
-  // Split by markers
-  const rawSentences = withMarkers.split("|");
-  
-  // Clean up and filter out empty or invalid sentences
-  const cleanSentences = rawSentences
-    .map(s => s.trim())
-    .filter(s => {
-      // Must be reasonable length and contain at least one letter
-      return s.length > 2 && /[a-z]/i.test(s);
-    });
-    
-  return cleanSentences;
-}
+// Gemini API for improved phrase segmentation and IPA generation
+const segmentTextWithGemini = async (text: string): Promise<string[]> => {
+  const timeout = new Promise<string[]>((_, reject) => {
+    setTimeout(() => reject(new Error("Timeout: Gemini API took too long to respond")), 8000);
+  });
 
-// Gemini API for improved phrase segmentation
-export const segmentTextWithGemini = async (text: string): Promise<string[]> => {
   try {
-    const response = await fetchWithTimeout(
+    const fetchPromise = fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDtrDZDuhNPmGDdRr7eEAXNRYiuEOgkAPA",
       {
         method: "POST",
@@ -81,12 +61,14 @@ Return only the phrases, one per line, without numbering or explanations.`
             },
           ],
         }),
-      },
-      10000 // 10 second timeout
+      }
     );
+
+    // Race between the fetch and the timeout
+    const response = await Promise.race([fetchPromise, timeout]);
     
-    if (!response.ok) {
-      console.error("Gemini API error:", await response.text());
+    if (!response || !('ok' in response) || !response.ok) {
+      console.error("Gemini API error:", response instanceof Response ? await response.text() : "Unknown error");
       // Fallback to basic segmentation
       return segmentTextBasic(text);
     }
@@ -109,47 +91,42 @@ Return only the phrases, one per line, without numbering or explanations.`
 };
 
 // Basic segmentation as fallback
-export const segmentTextBasic = (text: string): string[] => {
-  try {
-    // Use compromise to segment text
-    const doc = nlp.default(text);
-    
-    // Get phrases (noun phrases, verb phrases, etc.)
-    const phrases = doc.phrases().out('array');
-    
-    // Break longer phrases into smaller chunks
-    let result: string[] = [];
-    
-    for (const phrase of phrases) {
-      if (phrase.split(' ').length > 5) {
-        // Split long phrases
-        const words = phrase.split(' ');
-        for (let i = 0; i < words.length; i += 4) {
-          const chunk = words.slice(i, i + 4).join(' ');
-          if (chunk.trim().length > 0) {
-            result.push(chunk.trim());
-          }
+const segmentTextBasic = (text: string): string[] => {
+  // Use compromise to segment text
+  const doc = nlp(text);
+  
+  // Get phrases (noun phrases, verb phrases, etc.)
+  const phrases = doc.phrases().out('array');
+  
+  // Break longer phrases into smaller chunks
+  let result: string[] = [];
+  
+  for (const phrase of phrases) {
+    if (phrase.split(' ').length > 5) {
+      // Split long phrases
+      const words = phrase.split(' ');
+      for (let i = 0; i < words.length; i += 4) {
+        const chunk = words.slice(i, i + 4).join(' ');
+        if (chunk.trim().length > 0) {
+          result.push(chunk.trim());
         }
-      } else if (phrase.trim().length > 0) {
-        result.push(phrase.trim());
       }
+    } else if (phrase.trim().length > 0) {
+      result.push(phrase.trim());
     }
-    
-    return result;
-  } catch (error) {
-    console.error("Error in basic text segmentation:", error);
-    // Last resort: just split by punctuation
-    return text
-      .split(/[.!?;]/)
-      .map(s => s.trim())
-      .filter(s => s.length > 2);
   }
+  
+  return result;
 };
 
 // Get IPA transcription using Gemini
-export const getIpaForPhrase = async (phrase: string): Promise<string> => {
+const getIpaForPhrase = async (phrase: string): Promise<string> => {
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error("Timeout: IPA generation took too long")), 5000);
+  });
+
   try {
-    const response = await fetchWithTimeout(
+    const fetchPromise = fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDtrDZDuhNPmGDdRr7eEAXNRYiuEOgkAPA",
       {
         method: "POST",
@@ -167,12 +144,14 @@ export const getIpaForPhrase = async (phrase: string): Promise<string> => {
             },
           ],
         }),
-      },
-      5000 // 5 second timeout
+      }
     );
 
-    if (!response.ok) {
-      console.error("Gemini API error for IPA:", await response.text());
+    // Race between fetch and timeout
+    const response = await Promise.race([fetchPromise, timeout]);
+
+    if (!response || !('ok' in response) || !response.ok) {
+      console.error("Gemini API error for IPA:", response instanceof Response ? await response.text() : "Unknown error");
       return "";
     }
 
@@ -180,15 +159,102 @@ export const getIpaForPhrase = async (phrase: string): Promise<string> => {
     const ipaTranscription = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
     // Clean up the response to extract just the IPA
-    return ipaTranscription.replace(/[\[\]\/]/g, '').trim();
+    return ipaTranscription.replace(/[[\]\/]/g, '').trim();
   } catch (error) {
     console.error("Error getting IPA from Gemini:", error);
     return '';
   }
 };
 
+// Function to translate text - first try with Gradio, fallback to Gemini
+const translateText = async (text: string): Promise<string> => {
+  try {
+    // First try the Gradio client
+    const result = await translateViaGradio(text);
+    if (result && result !== "Lỗi dịch") {
+      return result;
+    }
+    
+    // If Gradio fails, fall back to Gemini
+    return translateViaGemini(text);
+  } catch (error) {
+    console.error("Translation error:", error);
+    // Last resort fallback
+    return translateViaGemini(text);
+  }
+};
+
+// Function to translate using Gradio
+const translateViaGradio = async (text: string): Promise<string> => {
+  const timeout = new Promise<string>((_, reject) => {
+    setTimeout(() => reject(new Error("Timeout: Gradio translation took too long")), 5000);
+  });
+
+  try {
+    // Dynamic import to avoid build issues
+    const { Client } = await import('@gradio/client');
+    const clientPromise = Client.connect("HAi-Star1/Nga-ngo");
+    const client = await Promise.race([clientPromise, timeout]);
+    
+    const resultPromise = client.predict("/predict", {
+      text: text,
+    });
+    
+    const result = await Promise.race([resultPromise, timeout]);
+    return result.data as string;
+  } catch (error) {
+    console.error("Gradio translation error:", error);
+    return "Lỗi dịch";
+  }
+};
+
+// Backup translation function using Gemini
+const translateViaGemini = async (text: string): Promise<string> => {
+  const timeout = new Promise<string>((_, reject) => {
+    setTimeout(() => reject(new Error("Timeout: Gemini translation took too long")), 5000);
+  });
+
+  try {
+    const fetchPromise = fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDtrDZDuhNPmGDdRr7eEAXNRYiuEOgkAPA",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `Translate the following English text to Vietnamese. Only return the translation, nothing else:
+                  
+                  "${text}"`
+                },
+              ],
+            },
+          ],
+        }),
+      }
+    );
+
+    // Race between the fetch and timeout
+    const response = await Promise.race([fetchPromise, timeout]);
+    
+    if (!response || !('ok' in response) || !response.ok) {
+      return "Lỗi dịch";
+    }
+
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Lỗi dịch';
+  } catch (error) {
+    console.error("Gemini translation error:", error);
+    return "Lỗi dịch";
+  }
+};
+
 // Generate fill-in-the-blanks for practice
-export const generateFillInBlanks = (text: string): string => {
+const generateFillInBlanks = (text: string): string => {
   const words = text.split(' ');
   
   if (words.length <= 2) {
@@ -199,7 +265,7 @@ export const generateFillInBlanks = (text: string): string => {
   // Select 20-30% of words to blank out
   const blankCount = Math.max(1, Math.floor(words.length * 0.25));
   const wordIndices = Array.from({length: words.length}, (_, i) => i);
-  const blankIndices: number[] = [];
+  const blankIndices = [];
   
   // Select indices to blank out
   for (let i = 0; i < blankCount; i++) {
@@ -227,83 +293,63 @@ export const generateFillInBlanks = (text: string): string => {
   return result;
 };
 
-// Main text analysis function
 export const analyzeText = async (text: string): Promise<TextAnalysisResult> => {
   try {
-    console.log("Starting text analysis...");
-    
     // Use Gemini API for improved phrase segmentation
     const phrases = await segmentTextWithGemini(text);
-    console.log(`Extracted ${phrases.length} phrases`);
     
     // Extract sentences for later steps
     const sentences = extractSentences(text);
-    console.log(`Extracted ${sentences.length} sentences`);
     
     // Process each phrase with enhanced translation and IPA
     const analyzedPhrases: AnalyzedPhrase[] = [];
     const analyzedSentences: AnalyzedSentence[] = [];
     
     // Process phrases
-    console.log("Processing phrases...");
-    for (const phrase of phrases) {
+    for (const [index, phrase] of phrases.entries()) {
       if (phrase.trim().length < 2) continue;
       
-      try {
-        // Get Vietnamese translation directly with Gemini for reliability
-        const translation = await translate(phrase);
-        
-        // Create fill-in-the-blanks version
-        const fillInBlanks = generateFillInBlanks(phrase);
-        
-        // Get IPA transcription
-        const ipa = await getIpaForPhrase(phrase);
-        
-        analyzedPhrases.push({
-          id: `phrase-${uuidv4()}`,
-          english: phrase,
-          vietnamese: translation,
-          fillInBlanks: fillInBlanks,
-          attempts: 0,
-          ipa: ipa
-        });
-      } catch (error) {
-        console.error(`Error processing phrase "${phrase}":`, error);
-      }
+      // Get Vietnamese translation
+      const translation = await translateText(phrase);
+      
+      // Create fill-in-the-blanks version
+      const fillInBlanks = generateFillInBlanks(phrase);
+      
+      // Get IPA transcription
+      const ipa = await getIpaForPhrase(phrase);
+      
+      analyzedPhrases.push({
+        id: `phrase-${uuidv4()}`,
+        english: phrase,
+        vietnamese: translation,
+        fillInBlanks: fillInBlanks,
+        attempts: 0,
+        ipa: ipa
+      });
     }
     
     // Process sentences
-    console.log("Processing sentences...");
-    for (const sentence of sentences) {
+    for (const [index, sentence] of sentences.entries()) {
       if (sentence.length < 5) continue;
       
-      try {
-        // Get Vietnamese translation directly with Gemini
-        const translation = await translate(sentence);
-        
-        // Create fill-in-the-blanks version
-        const fillInBlanks = generateFillInBlanks(sentence);
-        
-        // Get IPA transcription
-        const ipa = await getIpaForPhrase(sentence);
-        
-        analyzedSentences.push({
-          id: `sentence-${uuidv4()}`,
-          english: sentence,
-          vietnamese: translation,
-          fillInBlanks,
-          attempts: 0,
-          ipa: ipa
-        });
-      } catch (error) {
-        console.error(`Error processing sentence "${sentence}":`, error);
-      }
+      // Get Vietnamese translation
+      const translation = await translateText(sentence);
+      
+      // Create fill-in-the-blanks version
+      const fillInBlanks = generateFillInBlanks(sentence);
+      
+      // Get IPA transcription
+      const ipa = await getIpaForPhrase(sentence);
+      
+      analyzedSentences.push({
+        id: `sentence-${uuidv4()}`,
+        english: sentence,
+        vietnamese: translation,
+        fillInBlanks,
+        attempts: 0,
+        ipa: ipa
+      });
     }
-    
-    console.log("Text analysis complete:", {
-      phrases: analyzedPhrases.length,
-      sentences: analyzedSentences.length
-    });
     
     return {
       originalText: text,
@@ -315,3 +361,25 @@ export const analyzeText = async (text: string): Promise<TextAnalysisResult> => 
     throw new Error('Failed to analyze text');
   }
 };
+
+// Improved function to extract sentences from text
+function extractSentences(text: string): string[] {
+  // First, identify sentence boundaries with more precision
+  const withMarkers = text
+    .replace(/([.!?])\s+/g, "$1|")
+    .replace(/([.!?])"(\s|$)/g, "$1\"|")
+    .replace(/\r?\n/g, "|");  // Consider line breaks as potential sentence breaks
+    
+  // Split by markers
+  const rawSentences = withMarkers.split("|");
+  
+  // Clean up and filter out empty or invalid sentences
+  const cleanSentences = rawSentences
+    .map(s => s.trim())
+    .filter(s => {
+      // Must be reasonable length and contain at least one letter
+      return s.length > 2 && /[a-z]/i.test(s);
+    });
+    
+  return cleanSentences;
+}
