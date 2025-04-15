@@ -1,43 +1,36 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getAvailableVoices } from '@/utils/speechUtils';
+import { Loader2 } from 'lucide-react';
 
 const VoiceSelector = () => {
-  const { selectedVoice, setSelectedVoice } = useStudy();
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadVoices = async () => {
-      setLoading(true);
-      try {
-        const availableVoices = await getAvailableVoices();
-        // Filter for English voices only
-        const englishVoices = availableVoices.filter(voice => voice.lang.startsWith('en'));
-        setVoices(englishVoices);
-        
-        // Set default voice if none selected yet
-        if (!selectedVoice && englishVoices.length > 0) {
-          setSelectedVoice(englishVoices[0].name);
-        }
-      } catch (error) {
-        console.error('Error loading voices:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadVoices();
-  }, [selectedVoice, setSelectedVoice]);
+  const { 
+    selectedVoice, 
+    setSelectedVoice, 
+    availableVoices,
+    isLoadingVoices 
+  } = useStudy();
 
   const handleVoiceChange = (value: string) => {
     setSelectedVoice(value);
   };
 
-  if (loading || voices.length === 0) {
-    return <div className="text-sm text-gray-500">Đang tải giọng đọc...</div>;
+  if (isLoadingVoices) {
+    return (
+      <div className="flex items-center text-sm text-gray-500">
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        Đang tải giọng đọc...
+      </div>
+    );
+  }
+
+  if (availableVoices.length === 0) {
+    return (
+      <div className="text-sm text-gray-500">
+        Không tìm thấy giọng đọc. Vui lòng thử lại sau.
+      </div>
+    );
   }
 
   return (
@@ -46,13 +39,13 @@ const VoiceSelector = () => {
         Chọn giọng đọc:
       </label>
       <Select value={selectedVoice} onValueChange={handleVoiceChange}>
-        <SelectTrigger id="voice-select" className="w-[200px]">
+        <SelectTrigger id="voice-select" className="w-[250px]">
           <SelectValue placeholder="Chọn giọng đọc" />
         </SelectTrigger>
         <SelectContent>
-          {voices.map(voice => (
+          {availableVoices.map(voice => (
             <SelectItem key={voice.name} value={voice.name}>
-              {voice.name}
+              {voice.name} ({voice.lang})
             </SelectItem>
           ))}
         </SelectContent>

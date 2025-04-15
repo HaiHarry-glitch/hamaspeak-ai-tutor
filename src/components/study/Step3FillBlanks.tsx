@@ -4,16 +4,16 @@ import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Volume2, Mic, ArrowRight, Loader2, Check, Info } from 'lucide-react';
-import { speakText, startSpeechRecognition, calculatePronunciationScore, getWordErrors, getIpaTranscription } from '@/utils/speechUtils';
+import { speakText } from '@/utils/speechUtils';
 import { Progress } from '@/components/ui/progress';
 import PronunciationFeedback from './PronunciationFeedback';
 import WordPronunciationPractice from './WordPronunciationPractice';
+import { usePronunciationHandler } from './PronunciationHandler';
 
 const Step3FillBlanks = () => {
   const { analysisResult, setCurrentStep, selectedVoice } = useStudy();
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
   const [score, setScore] = useState<number | null>(null);
   const [attemptsLeft, setAttemptsLeft] = useState(3);
@@ -30,6 +30,9 @@ const Step3FillBlanks = () => {
     wordErrorRate: 0
   });
   const [practicingWord, setPracticingWord] = useState<{word: string; ipa: string} | null>(null);
+  
+  // Use the pronunciation handler
+  const { isProcessing: isListening, analyzePronunciation } = usePronunciationHandler();
 
   const currentPhrase = analysisResult?.phrases[currentPhraseIndex];
 
@@ -49,52 +52,27 @@ const Step3FillBlanks = () => {
   const handleListen = async () => {
     if (isListening || !currentPhrase) return;
     
-    setIsListening(true);
     setUserTranscript('');
     setScore(null);
     
-    try {
-      const result = await startSpeechRecognition('en-US');
+    const result = await analyzePronunciation(currentPhrase.english, (result) => {
       setUserTranscript(result.transcript);
       
-      const pronunciationScore = calculatePronunciationScore(
-        currentPhrase.english, 
-        result.transcript
-      );
-      setScore(pronunciationScore);
+      // Set the numeric score for the UI
+      setScore(result.scoreDetails.overallScore);
       
-      // Enhanced pronunciation scoring with multiple dimensions
-      setPronunciationScores({
-        overallScore: pronunciationScore,
-        accuracyScore: Math.min(100, Math.round(pronunciationScore * (0.9 + Math.random() * 0.2))),
-        fluencyScore: Math.min(100, Math.round(pronunciationScore * (0.85 + Math.random() * 0.3))),
-        intonationScore: Math.min(100, Math.round(pronunciationScore * (0.8 + Math.random() * 0.3))),
-        stressScore: Math.min(100, Math.round(pronunciationScore * (0.85 + Math.random() * 0.25))),
-        rhythmScore: Math.min(100, Math.round(pronunciationScore * (0.9 + Math.random() * 0.2))),
-        wordErrorRate: Math.max(0, Math.min(100, Math.round(30 - pronunciationScore * 0.25)))
-      });
+      // Set the detailed pronunciation scores
+      setPronunciationScores(result.scoreDetails);
       
-      // Get mispronounced words
-      if (pronunciationScore < 90) {
-        const errorWords = getWordErrors(currentPhrase.english, result.transcript);
-        // Fetch IPA for each error word
-        const errorWordsWithIpa = await Promise.all(
-          errorWords.map(async (word) => ({
-            word,
-            ipa: await getIpaTranscription(word)
-          }))
-        );
-        setWordErrors(errorWordsWithIpa);
-      } else {
-        setWordErrors([]);
-      }
+      // Set word errors for feedback
+      setWordErrors(result.errorWords);
       
+      // Decrement attempts
       setAttemptsLeft(prev => prev - 1);
-    } catch (error) {
-      console.error('Speech recognition error:', error);
+    });
+    
+    if (!result) {
       setUserTranscript('Không thể nhận diện giọng nói. Vui lòng thử lại.');
-    } finally {
-      setIsListening(false);
     }
   };
 
@@ -139,14 +117,14 @@ const Step3FillBlanks = () => {
   };
 
   const handleWordListen = async (word: string): Promise<{ transcript: string; score: number }> => {
-    try {
-      const result = await startSpeechRecognition('en-US');
-      const wordScore = calculatePronunciationScore(word, result.transcript);
-      return { transcript: result.transcript, score: wordScore };
-    } catch (error) {
-      console.error('Speech recognition error:', error);
-      return { transcript: 'Không thể nhận diện', score: 0 };
+    const result = await analyzePronunciation(word);
+    if (result) {
+      return { 
+        transcript: result.transcript, 
+        score: result.scoreDetails.overallScore 
+      };
     }
+    return { transcript: 'Không thể nhận diện', score: 0 };
   };
 
   if (!analysisResult || !currentPhrase) {
