@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
@@ -9,8 +9,16 @@ const VoiceSelector = () => {
     selectedVoice, 
     setSelectedVoice, 
     availableVoices,
-    isLoadingVoices 
+    isLoadingVoices,
+    loadVoices
   } = useStudy();
+
+  // Make sure to load voices on component mount
+  useEffect(() => {
+    if (availableVoices.length === 0 && !isLoadingVoices) {
+      loadVoices();
+    }
+  }, [availableVoices.length, isLoadingVoices, loadVoices]);
 
   const handleVoiceChange = (value: string) => {
     setSelectedVoice(value);

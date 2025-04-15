@@ -1,22 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { StudyProvider, useStudy } from '@/contexts/StudyContext';
 import TextInput from '@/components/study/TextInput';
-import Step1Listening from '@/components/study/Step1Listening';
-import Step2Flashcards from '@/components/study/Step2Flashcards';
-import Step3EnglishSpeaking from '@/components/study/Step3EnglishSpeaking';
-import Step4VietnameseSpeaking from '@/components/study/Step4VietnameseSpeaking';
-import Step5FillBlanks from '@/components/study/Step5FillBlanks';
-import Step6ListeningComprehension from '@/components/study/Step6ListeningComprehension';
-import Step7ParagraphSpeaking from '@/components/study/Step7ParagraphSpeaking';
-import Step8CompleteSpeaking from '@/components/study/Step8CompleteSpeaking';
 import VoiceSelector from '@/components/study/VoiceSelector';
 import StudyProgress from '@/components/study/StudyProgress';
-import AnalyzingProgress from '@/components/study/AnalyzingProgress';
+import StudyStepHandler from '@/components/study/StudyStepHandler';
 import Header from '@/components/Header';
-import { Loader2, List, MessageSquare, Lightbulb, Globe } from 'lucide-react';
+import { List, MessageSquare, Lightbulb, Globe, Loader2 } from 'lucide-react';
 import PronunciationChart from '@/components/study/PronunciationChart';
-import QuestionPrompt from '@/components/study/QuestionPrompt';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -164,7 +155,7 @@ const StudyContent = () => {
   };
   
   // Common function for pronunciation analysis that will be passed to components
-  const handleAnalyzePronunciation = async (text: string, audioBlob?: Blob) => {
+  const handleAnalyzePronunciation = async (text: string, audioBlob?: Blob): Promise<PronunciationAnalysisResult> => {
     console.log('Analyzing pronunciation for:', text);
     
     // Generate realistic scores
@@ -195,8 +186,6 @@ const StudyContent = () => {
         <h1 className="text-3xl md:text-4xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
           Luyện nói tiếng Anh cùng Hamaspeak
         </h1>
-        
-        {isAnalyzing && <AnalyzingProgress isAnalyzing={isAnalyzing} />}
         
         {currentStep > 0 && !isAnalyzing && (
           <div className="max-w-4xl mx-auto mb-8">
@@ -357,40 +346,9 @@ const StudyContent = () => {
         
         {currentStep === 0 && !showTopicPrompt && <TextInput />}
         
-        {/* Input steps (1-4) */}
-        {currentStep === 1 && <Step1Listening />}
-        {currentStep === 2 && <Step2Flashcards />}
-        {currentStep === 3 && (
-          <Step3EnglishSpeaking 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
-          />
-        )}
-        {currentStep === 4 && (
-          <Step4VietnameseSpeaking 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
-          />
-        )}
-        
-        {/* Output steps (5-8) */}
-        {currentStep === 5 && (
-          <Step5FillBlanks 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
-          />
-        )}
-        {currentStep === 6 && (
-          <Step6ListeningComprehension 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
-          />
-        )}
-        {currentStep === 7 && (
-          <Step7ParagraphSpeaking 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
-          />
-        )}
-        {currentStep === 8 && (
-          <Step8CompleteSpeaking 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
-          />
+        {/* Show the appropriate step component */}
+        {currentStep > 0 && (
+          <StudyStepHandler onAnalyzePronunciation={handleAnalyzePronunciation} />
         )}
         
         {/* Pronunciation Chart - shown when needed */}

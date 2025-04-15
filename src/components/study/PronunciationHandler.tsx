@@ -51,7 +51,7 @@ export const usePronunciationHandler = () => {
       };
       
       // Get mispronounced words
-      const errorWords = [];
+      const errorWords: {word: string; ipa: string}[] = [];
       if (overallScore < 90) {
         const errorWordsList = getWordErrors(referenceText, result.transcript);
         // Fetch IPA for each error word
