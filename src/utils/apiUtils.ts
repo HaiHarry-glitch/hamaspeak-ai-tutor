@@ -38,10 +38,10 @@ export const fetchWithTimeout = async (
 };
 
 /**
- * Generic function to retry a failed API request
+ * Generic function to retry a failed API request with exponential backoff
  * @param fn The async function to retry
  * @param retries Number of retries
- * @param delay Delay between retries in ms
+ * @param delay Delay between retries in ms (increases exponentially)
  * @param onRetry Optional callback on retry
  * @returns Promise resolving to the function result
  */
@@ -62,8 +62,9 @@ export const retryAsync = async<T>(
       onRetry(retries, error as Error);
     }
     
-    // Wait for the specified delay
-    await new Promise(resolve => setTimeout(resolve, delay));
+    // Wait for the specified delay with exponential backoff
+    const backoffDelay = delay * (2 ** (3 - retries));
+    await new Promise(resolve => setTimeout(resolve, backoffDelay));
     
     // Try again with one less retry
     return retryAsync(fn, retries - 1, delay, onRetry);
@@ -78,7 +79,7 @@ export const retryAsync = async<T>(
  */
 export const withFallback = async<T>(
   mainPromise: Promise<T>,
-  fallbackFn: () => Promise<T>
+  fallbackFn: () => Promise<T> | T
 ): Promise<T> => {
   try {
     return await mainPromise;
@@ -87,3 +88,4 @@ export const withFallback = async<T>(
     return fallbackFn();
   }
 };
+
