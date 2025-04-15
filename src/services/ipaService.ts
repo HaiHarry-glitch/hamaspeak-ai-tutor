@@ -1,8 +1,5 @@
 
-/**
- * Translate text using Gemini API
- */
-export const translate = async (text: string): Promise<string> => {
+export const getIpaTranscription = async (text: string): Promise<string> => {
   try {
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDtrDZDuhNPmGDdRr7eEAXNRYiuEOgkAPA",
@@ -16,9 +13,7 @@ export const translate = async (text: string): Promise<string> => {
             {
               parts: [
                 {
-                  text: `Dịch câu sau sang tiếng việt và ko trả lời gì thêm:
-
-"${text}"`
+                  text: `Generate the IPA (International Phonetic Alphabet) transcription for this English text. Only return the IPA, nothing else: "${text}"`
                 },
               ],
             },
@@ -28,13 +23,14 @@ export const translate = async (text: string): Promise<string> => {
     );
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      throw new Error('IPA generation failed');
     }
 
     const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '[Lỗi dịch]';
+    const ipa = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return ipa.replace(/[[\]\/]/g, '').trim();
   } catch (error) {
-    console.error("Translation error:", error);
-    return '[Lỗi dịch]';
+    console.error('IPA error:', error);
+    return '';
   }
 };
