@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { StudyProvider, useStudy } from '@/contexts/StudyContext';
 import TextInput from '@/components/study/TextInput';
+import CollocationsView from '@/components/study/CollocationsView';
 import Step1Listening from '@/components/study/Step1Listening';
 import Step2Flashcards from '@/components/study/Step2Flashcards';
 import Step3EnglishSpeaking from '@/components/study/Step3EnglishSpeaking';
@@ -80,6 +80,9 @@ const StudyContent = () => {
         </div>
         
         {currentStep === 0 && <TextInput />}
+        
+        {/* Collocation View - shown after analysis but before step 1 */}
+        {currentStep === 0.5 && <CollocationsView />}
         
         {/* Input steps (1-4) */}
         {currentStep === 1 && <Step1Listening />}

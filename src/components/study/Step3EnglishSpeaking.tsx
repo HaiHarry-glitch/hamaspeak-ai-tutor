@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   onAnalyzePronunciation
 }) => {
   const { analysisResult, setCurrentStep, selectedVoice } = useStudy();
-  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [currentCollocationIndex, setCurrentCollocationIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
@@ -29,7 +28,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   const [practicingWord, setPracticingWord] = useState<{word: string; ipa: string} | null>(null);
   const { toast } = useToast();
 
-  const currentPhrase = analysisResult?.phrases[currentPhraseIndex];
+  const currentCollocation = analysisResult?.collocations?.[currentCollocationIndex];
 
   useEffect(() => {
     return () => {
@@ -39,11 +38,11 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   }, []);
 
   const handleSpeak = async () => {
-    if (!currentPhrase || isSpeaking) return;
+    if (!currentCollocation || isSpeaking) return;
     
     setIsSpeaking(true);
     try {
-      await speakText(currentPhrase.english, selectedVoice);
+      await speakText(currentCollocation, selectedVoice);
     } catch (error) {
       console.error('Speech error:', error);
       toast({
@@ -57,7 +56,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   };
 
   const handleListen = async () => {
-    if (isListening || !currentPhrase) return;
+    if (isListening || !currentCollocation) return;
     
     setIsListening(true);
     setUserTranscript('');
@@ -70,7 +69,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
       
       // Use the enhanced pronunciation scoring
       const scores = calculatePronunciationScore(
-        currentPhrase.english, 
+        currentCollocation, 
         result.transcript
       );
       
@@ -106,7 +105,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
       
       // Call external analysis handler if provided
       if (onAnalyzePronunciation) {
-        await onAnalyzePronunciation(currentPhrase.english);
+        await onAnalyzePronunciation(currentCollocation);
       }
     } catch (error) {
       console.error('Speech recognition error:', error);
@@ -122,15 +121,15 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   };
 
   const handleNext = () => {
-    if (currentPhraseIndex < (analysisResult?.phrases.length || 0) - 1) {
-      setCurrentPhraseIndex(prev => prev + 1);
+    if (currentCollocationIndex < (analysisResult?.collocations?.length || 0) - 1) {
+      setCurrentCollocationIndex(prev => prev + 1);
       setAttemptsLeft(3);
       setUserTranscript('');
       setScoreDetails(null);
       setShowFeedback(false);
       setWordErrors([]);
     } else {
-      // Move to next step when all phrases are complete
+      // Move to next step when all collocations are complete
       setCurrentStep(4);
     }
   };
@@ -171,7 +170,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
     }
   };
 
-  if (!analysisResult || !currentPhrase) {
+  if (!analysisResult || !currentCollocation) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -179,7 +178,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
     );
   }
 
-  const progress = ((currentPhraseIndex + 1) / analysisResult.phrases.length) * 100;
+  const progress = ((currentCollocationIndex + 1) / (analysisResult.collocations?.length || 1)) * 100;
   
   // Build pronunciation feedback data
   const feedbackData = wordErrors.map(wordError => ({
@@ -193,9 +192,9 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   return (
     <Card className="glass-card p-6 max-w-3xl mx-auto animate-fade-in">
       <div className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-gradient mb-2">Bước 3: Luyện Nói Tiếng Anh (Input)</h2>
+        <h2 className="text-2xl font-bold text-gradient mb-2">Bước 3: Luyện Nói Collocations (Input)</h2>
         <p className="text-gray-600">
-          Luyện phát âm từng cụm từ tiếng Anh từ bản gốc
+          Luyện phát âm từng collocation tiếng Anh từ bản gốc
         </p>
       </div>
 
@@ -208,148 +207,89 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
 
       <div className="bg-white p-6 rounded-lg mb-6 shadow-sm">
         <div className="text-center">
-          <div className="text-xs uppercase tracking-wider text-gray-500 mb-1">
-            Luyện phát âm từng từ
-          </div>
-          <h3 className="text-2xl font-medium text-hamaspeak-blue">
-            {currentPhrase.english}
+          <h3 className="text-xl font-medium text-hamaspeak-dark mb-4">
+            {currentCollocation}
           </h3>
-          <div className="text-sm text-gray-500 mt-1 font-mono">
-            {/* Show IPA pronunciation if available */}
-            {currentPhrase.ipa || ""}
-          </div>
-          
-          <div className="mt-6 flex justify-center">
-            <Button 
-              onClick={handleSpeak} 
-              disabled={isSpeaking}
-              className="relative overflow-hidden group"
-              size="lg"
-            >
-              {isSpeaking ? (
-                <>
-                  <VolumeX className="mr-2 h-5 w-5 animate-pulse" />
-                  Đang phát...
-                </>
-              ) : (
-                <>
-                  <Volume2 className="mr-2 h-5 w-5" />
-                  Nghe mẫu
-                </>
-              )}
-              <span className="absolute inset-0 bg-blue-400/20 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
-            </Button>
-          </div>
         </div>
         
         {userTranscript && (
-          <div className="mt-6 pt-4 border-t">
-            <div className="mb-2 flex justify-between items-center">
-              <p className="font-medium">Câu của bạn:</p>
-              <div>
-                {scoreDetails && (
-                  <div className="flex items-center">
-                    <span className="font-medium mr-2">Điểm: {scoreDetails.overallScore}/100</span>
-                    {scoreDetails.overallScore >= 80 ? (
-                      <Check className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <X className="h-5 w-5 text-orange-500" />
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <p className={`p-3 rounded-md ${
-              scoreDetails?.overallScore >= 80 
-                ? 'bg-green-50 text-green-700' 
-                : 'bg-orange-50 text-orange-700'
-            }`}>
+          <div className="mt-6 border-t pt-4">
+            <p className="font-medium mb-1">Câu của bạn:</p>
+            <p className={`${scoreDetails?.overallScore > 70 ? 'text-green-600' : 'text-orange-500'}`}>
               {userTranscript}
             </p>
             
             {scoreDetails && (
-              <div className="mt-3">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-medium">Điểm tổng thể:</span>
-                  <span>{scoreDetails.overallScore}%</span>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Độ chính xác tổng thể</span>
+                    <span>{scoreDetails.overallScore}%</span>
+                  </div>
+                  <Progress 
+                    value={scoreDetails.overallScore} 
+                    className={`h-2 ${
+                      scoreDetails.overallScore > 80 ? 'bg-green-100' : 
+                      scoreDetails.overallScore > 60 ? 'bg-yellow-100' : 
+                      'bg-orange-100'
+                    }`}
+                  />
                 </div>
-                <Progress 
-                  value={scoreDetails.overallScore} 
-                  className={`h-2.5 ${
-                    scoreDetails.overallScore > 80 ? 'bg-green-100' : 
-                    scoreDetails.overallScore > 60 ? 'bg-yellow-100' : 
-                    'bg-orange-100'}`} 
-                />
-                
-                <p className="mt-2 text-sm">
-                  {scoreDetails.overallScore > 90 ? 'Tuyệt vời! Phát âm của bạn rất chuẩn.' :
-                   scoreDetails.overallScore > 80 ? 'Rất tốt! Tiếp tục duy trì.' :
-                   scoreDetails.overallScore > 60 ? 'Khá tốt! Tiếp tục luyện tập.' :
-                   'Hãy lắng nghe và thử lại để cải thiện phát âm.'}
-                </p>
-                
-                <div className="flex mt-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowFeedback(!showFeedback)}
-                    className="mr-2"
-                  >
-                    <Info className="mr-1 h-4 w-4 text-blue-500" />
-                    {showFeedback ? 'Ẩn chi tiết' : 'Xem chi tiết'}
-                  </Button>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Độ chính xác</span>
+                      <span>{scoreDetails.accuracyScore}%</span>
+                    </div>
+                    <Progress value={scoreDetails.accuracyScore} className="h-1" />
+                  </div>
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
-                  >
-                    <img 
-                      src="/lovable-uploads/e18c16ba-65ea-46f6-b13e-e2216e5d0616.png" 
-                      alt="Visual pronunciation guide" 
-                      className="mr-1 h-4 w-4" 
-                    />
-                    Hỗ trợ phát âm
-                  </Button>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Độ trôi chảy</span>
+                      <span>{scoreDetails.fluencyScore}%</span>
+                    </div>
+                    <Progress value={scoreDetails.fluencyScore} className="h-1" />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Ngữ điệu</span>
+                      <span>{scoreDetails.intonationScore}%</span>
+                    </div>
+                    <Progress value={scoreDetails.intonationScore} className="h-1" />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Trọng âm</span>
+                      <span>{scoreDetails.stressScore}%</span>
+                    </div>
+                    <Progress value={scoreDetails.stressScore} className="h-1" />
+                  </div>
                 </div>
               </div>
             )}
           </div>
         )}
       </div>
-      
-      {showFeedback && scoreDetails && (
-        <PronunciationFeedback
-          scoreDetails={scoreDetails}
-          feedback={feedbackData}
+
+      {wordErrors.length > 0 && showFeedback && (
+        <PronunciationFeedback 
+          feedbackData={feedbackData}
           onPracticeWord={handlePracticeWord}
-          onPlayReference={handleWordPlayReference}
-          transcript={userTranscript}
-          referenceText={currentPhrase.english}
         />
       )}
-      
+
       {practicingWord && (
-        <div className="mb-6">
-          <WordPronunciationPractice
-            word={practicingWord.word}
-            ipa={practicingWord.ipa}
-            onClose={() => setPracticingWord(null)}
-            onPlayReference={handleWordPlayReference}
-            onListen={handleWordListen}
-            videoTutorialUrl="#"
-            examples={[
-              { 
-                text: `Example: ${practicingWord.word} is important.`, 
-                translation: `Ví dụ: ${practicingWord.word} là quan trọng.` 
-              }
-            ]}
-            tips={[
-              "Chú ý đến trọng âm của từ",
-              "Tập trung vào các nguyên âm chính xác"
-            ]}
-          />
-        </div>
+        <WordPronunciationPractice
+          word={practicingWord.word}
+          ipa={practicingWord.ipa}
+          onClose={() => setPracticingWord(null)}
+          onPlayReference={handleWordPlayReference}
+          onListen={handleWordListen}
+        />
       )}
       
       <div className="flex items-center justify-center mb-4">
@@ -366,50 +306,52 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
 
       <div className="flex flex-wrap justify-center gap-3">
         <Button 
+          onClick={handleSpeak} 
+          disabled={isSpeaking}
+          className="glass-button"
+        >
+          <Volume2 className="mr-2 h-4 w-4" />
+          {isSpeaking ? 'Đang phát...' : 'Nghe mẫu'}
+        </Button>
+        
+        <Button 
           onClick={handleListen} 
           disabled={isListening || attemptsLeft <= 0}
-          className="bg-hamaspeak-teal hover:bg-hamaspeak-teal/90"
-          size="lg"
+          className="glass-button bg-hamaspeak-teal hover:bg-hamaspeak-teal/90"
         >
-          {isListening ? (
-            <>
-              <MicOff className="mr-2 h-5 w-5 animate-pulse" />
-              Đang nghe...
-            </>
-          ) : (
-            <>
-              <Mic className="mr-2 h-5 w-5" />
-              Nói theo
-            </>
-          )}
+          <Mic className={`mr-2 h-4 w-4 ${isListening ? 'animate-pulse' : ''}`} />
+          {isListening ? 'Đang nghe...' : 'Nói theo'}
         </Button>
+
+        {scoreDetails && (
+          <Button
+            variant="outline"
+            onClick={() => setShowFeedback(!showFeedback)}
+            className="flex items-center"
+          >
+            <Info className="mr-2 h-4 w-4" />
+            {showFeedback ? 'Ẩn phản hồi' : 'Xem phản hồi'}
+          </Button>
+        )}
         
         {attemptsLeft <= 0 && (
           <Button 
             variant="outline" 
             onClick={resetAttempts}
+            className="flex items-center"
           >
+            <ArrowRight className="mr-2 h-4 w-4" />
             Thử lại
           </Button>
         )}
         
-        <Button 
-          onClick={handleNext} 
-          disabled={attemptsLeft === 3 && !scoreDetails}
-          className="bg-hamaspeak-blue hover:bg-hamaspeak-blue/90"
-          size="lg"
+        <Button
+          onClick={handleNext}
+          disabled={!scoreDetails && attemptsLeft === 3}
+          className="glass-button bg-hamaspeak-purple hover:bg-hamaspeak-purple/90"
         >
-          {currentPhraseIndex < analysisResult.phrases.length - 1 
-            ? 'Cụm từ tiếp theo' 
-            : 'Bước tiếp theo'}
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
-      
-      <div className="mt-6 flex justify-center">
-        <Button variant="link" size="sm" className="text-xs text-gray-500">
-          <HelpCircle className="h-3 w-3 mr-1" />
-          Hướng dẫn phát âm
+          <ArrowRight className="mr-2 h-4 w-4" />
+          Tiếp theo
         </Button>
       </div>
     </Card>

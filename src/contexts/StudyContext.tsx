@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { TextAnalysisResult, analyzeText } from '@/services/textAnalyzer';
 
@@ -43,7 +42,12 @@ export const StudyProvider = ({ children }: StudyProviderProps) => {
       setIsAnalyzing(true);
       const result = await analyzeText(text);
       setAnalysisResult(result);
-      setCurrentStep(1); // Move to the first step after analysis
+      
+      if (result.collocations && result.collocations.length > 0) {
+        setCurrentStep(0.5);
+      } else {
+        setCurrentStep(1);
+      }
     } catch (error) {
       console.error('Failed to analyze text:', error);
     } finally {

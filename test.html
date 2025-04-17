@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Server Test</h1>
+    <p>This is a simple test to check if the server is working.</p>
+    
+    <button id="testButton">Test API Connection</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        document.getElementById('testButton').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Testing API connection...';
+            
+            try {
+                // Create a simple FormData with text only
+                const formData = new FormData();
+                formData.append('text', 'Hello world');
+                
+                // Use fetch to call the API
+                const response = await fetch('/api/pronunciation/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <h3>API Connection Successful!</h3>
+                    <p>Response received:</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>API Connection Failed</h3>
+                    <p>Error: ${error.message}</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html> 

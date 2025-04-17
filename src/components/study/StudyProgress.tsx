@@ -1,9 +1,12 @@
-
 import React from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 
 const StudyProgress = () => {
   const { currentStep } = useStudy();
+  
+  // Step 0.5 is the collocations view, which isn't shown in the progress bar
+  // We only show steps 1-8 in the progress
+  const normalizedStep = currentStep < 1 ? 0 : currentStep;
   
   const inputSteps = [
     { id: 1, name: 'Nghe cụm từ' },
@@ -25,12 +28,12 @@ const StudyProgress = () => {
     <div className="mb-10">
       <div className="flex justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className={`bg-hamaspeak-blue/20 text-hamaspeak-blue text-xs font-semibold py-1 px-3 rounded-full ${currentStep <= 4 ? 'animate-pulse' : ''}`}>
+          <span className={`bg-hamaspeak-blue/20 text-hamaspeak-blue text-xs font-semibold py-1 px-3 rounded-full ${normalizedStep <= 4 && normalizedStep > 0 ? 'animate-pulse' : ''}`}>
             Input
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`bg-hamaspeak-purple/20 text-hamaspeak-purple text-xs font-semibold py-1 px-3 rounded-full ${currentStep > 4 ? 'animate-pulse' : ''}`}>
+          <span className={`bg-hamaspeak-purple/20 text-hamaspeak-purple text-xs font-semibold py-1 px-3 rounded-full ${normalizedStep > 4 ? 'animate-pulse' : ''}`}>
             Output
           </span>
         </div>
@@ -40,7 +43,7 @@ const StudyProgress = () => {
         <div className="absolute h-1 top-4 left-0 right-0 bg-gray-200">
           <div 
             className="h-full bg-gradient-to-r from-hamaspeak-blue to-hamaspeak-purple transition-all duration-500 ease-in-out"
-            style={{ width: `${((currentStep / allSteps.length) * 100)}%` }}
+            style={{ width: `${((normalizedStep / allSteps.length) * 100)}%` }}
           ></div>
         </div>
         
@@ -50,12 +53,12 @@ const StudyProgress = () => {
             <div key={step.id} className="flex flex-col items-center">
               <div 
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  currentStep >= step.id 
+                  normalizedStep >= step.id 
                     ? step.id <= 4 
                       ? 'bg-hamaspeak-blue text-white' 
                       : 'bg-hamaspeak-purple text-white' 
                     : 'bg-gray-200'
-                } ${currentStep === step.id ? 'scale-110 shadow-lg' : ''}`}
+                } ${normalizedStep === step.id ? 'scale-110 shadow-lg' : ''}`}
               >
                 {step.id}
               </div>

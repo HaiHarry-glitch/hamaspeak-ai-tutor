@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 
 const Step4VietnameseSpeaking = () => {
   const { analysisResult, setCurrentStep, selectedVoice } = useStudy();
-  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [currentCollocationIndex, setCurrentCollocationIndex] = useState(0);
   const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -17,14 +16,14 @@ const Step4VietnameseSpeaking = () => {
   const [score, setScore] = useState<number | null>(null);
   const [showEnglish, setShowEnglish] = useState(false);
 
-  const currentPhrase = analysisResult?.phrases[currentPhraseIndex];
+  const currentCollocation = analysisResult?.collocations?.[currentCollocationIndex];
 
   const handleSpeak = async () => {
-    if (!currentPhrase || isSpeaking) return;
+    if (!currentCollocation || isSpeaking) return;
     
     setIsSpeaking(true);
     try {
-      await speakText(currentPhrase.english, selectedVoice);
+      await speakText(currentCollocation, selectedVoice);
     } catch (error) {
       console.error('Speech error:', error);
     } finally {
@@ -33,7 +32,7 @@ const Step4VietnameseSpeaking = () => {
   };
 
   const handleListen = async () => {
-    if (isListening || !currentPhrase) return;
+    if (isListening || !currentCollocation) return;
     
     setIsListening(true);
     setUserTranscript('');
@@ -44,11 +43,11 @@ const Step4VietnameseSpeaking = () => {
       setUserTranscript(result.transcript);
       
       const pronunciationScore = calculatePronunciationScore(
-        currentPhrase.english, 
+        currentCollocation, 
         result.transcript
-      );
-      setScore(pronunciationScore);
+      ).overallScore;
       
+      setScore(pronunciationScore);
       setAttemptsLeft(prev => prev - 1);
     } catch (error) {
       console.error('Speech recognition error:', error);
@@ -59,14 +58,14 @@ const Step4VietnameseSpeaking = () => {
   };
 
   const handleNext = () => {
-    if (currentPhraseIndex < (analysisResult?.phrases.length || 0) - 1) {
-      setCurrentPhraseIndex(prev => prev + 1);
+    if (currentCollocationIndex < (analysisResult?.collocations?.length || 0) - 1) {
+      setCurrentCollocationIndex(prev => prev + 1);
       setAttemptsLeft(3);
       setUserTranscript('');
       setScore(null);
       setShowEnglish(false);
     } else {
-      // Move to next step when all phrases are complete
+      // Move to next step when all collocations are complete
       setCurrentStep(5);
     }
   };
@@ -77,7 +76,7 @@ const Step4VietnameseSpeaking = () => {
     setScore(null);
   };
 
-  if (!analysisResult || !currentPhrase) {
+  if (!analysisResult || !currentCollocation) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -85,14 +84,14 @@ const Step4VietnameseSpeaking = () => {
     );
   }
 
-  const progress = ((currentPhraseIndex + 1) / analysisResult.phrases.length) * 100;
+  const progress = ((currentCollocationIndex + 1) / (analysisResult.collocations?.length || 1)) * 100;
 
   return (
     <Card className="glass-card p-6 max-w-3xl mx-auto animate-fade-in">
       <div className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-gradient mb-2">Bước 4: Nói Từ Nghĩa Tiếng Việt (Input)</h2>
+        <h2 className="text-2xl font-bold text-gradient mb-2">Bước 4: Nói Collocations Từ Tiếng Việt (Input)</h2>
         <p className="text-gray-600">
-          Xem nghĩa tiếng Việt và nói cụm từ bằng tiếng Anh
+          Xem nghĩa tiếng Việt và nói collocation bằng tiếng Anh
         </p>
       </div>
 
@@ -107,14 +106,15 @@ const Step4VietnameseSpeaking = () => {
         <div className="text-center">
           <p className="font-medium text-hamaspeak-purple mb-2">Nghĩa tiếng Việt:</p>
           <h3 className="text-xl font-medium text-hamaspeak-dark mb-4">
-            {currentPhrase.vietnamese}
+            {/* Note: We need to add Vietnamese translations for collocations */}
+            {currentCollocation}
           </h3>
           
           {showEnglish && (
             <div className="mt-4 p-3 bg-gray-50 rounded-lg animate-fade-in">
               <Check className="h-4 w-4 text-green-500 inline mr-1" />
               <p className="text-hamaspeak-blue font-medium inline">
-                {currentPhrase.english}
+                {currentCollocation}
               </p>
             </div>
           )}
@@ -201,22 +201,14 @@ const Step4VietnameseSpeaking = () => {
           </Button>
         )}
         
-        <Button 
-          onClick={handleNext} 
-          disabled={attemptsLeft === 3 && !score}
-          className="glass-button"
+        <Button
+          onClick={handleNext}
+          disabled={!score && attemptsLeft === 3}
+          className="glass-button bg-hamaspeak-purple hover:bg-hamaspeak-purple/90"
         >
-          {currentPhraseIndex < analysisResult.phrases.length - 1 
-            ? 'Tiếp tục' 
-            : 'Bước tiếp theo'}
-          <ArrowRight className="ml-2 h-4 w-4" />
+          <ArrowRight className="mr-2 h-4 w-4" />
+          Tiếp theo
         </Button>
-      </div>
-      
-      <div className="mt-6 text-center">
-        <p className="text-xs text-gray-500">
-          Kết thúc phần Input - Tiếp theo sẽ là phần Output
-        </p>
       </div>
     </Card>
   );

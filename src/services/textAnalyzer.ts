@@ -1,5 +1,5 @@
-
 import { segmentTextIntoPhrases, translateText, generateFillInTheBlanks } from '@/utils/speechUtils';
+import { extractCollocations, CollocationResult } from '@/utils/collocationUtils';
 
 export interface AnalyzedPhrase {
   id: string;
@@ -14,6 +14,7 @@ export interface TextAnalysisResult {
   originalText: string;
   phrases: AnalyzedPhrase[];
   sentences: AnalyzedSentence[];
+  collocations?: string[]; // Added collocations
 }
 
 export interface AnalyzedSentence {
@@ -122,11 +123,22 @@ export const analyzeText = async (text: string): Promise<TextAnalysisResult> => 
         ipa: ipa
       });
     }
+
+    // Extract collocations from the text
+    let collocations: string[] = [];
+    try {
+      const collocationsResult = await extractCollocations(text);
+      collocations = collocationsResult.collocations;
+    } catch (error) {
+      console.error('Error extracting collocations:', error);
+      // Continue with empty collocations if there's an error
+    }
     
     return {
       originalText: text,
       phrases: analyzedPhrases,
-      sentences: analyzedSentences
+      sentences: analyzedSentences,
+      collocations: collocations
     };
   } catch (error) {
     console.error('Error analyzing text:', error);

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, ArrowLeft, RefreshCw, Volume2, Check, Eye } from 'lucide-react';
-import { speakText } from '@/utils/speechUtils';
+import { ArrowRight, ArrowLeft, RefreshCw, Volume2, Check, Eye, Loader2 } from 'lucide-react';
+import { speakText, translateText } from '@/utils/speechUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Step2Flashcards = () => {
@@ -11,16 +11,50 @@ const Step2Flashcards = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [markedCards, setMarkedCards] = useState<Record<string, boolean>>({});
+  const [collocationTranslations, setCollocationTranslations] = useState<Record<string, string>>({});
+  const [isTranslating, setIsTranslating] = useState(false);
 
   const { currentIndex, isFlipped } = flashcardState;
-  const currentPhrase = analysisResult?.phrases[currentIndex];
+  
+  // Use collocations instead of phrases
+  const collocations = analysisResult?.collocations || [];
+  const currentCollocation = collocations[currentIndex];
 
   // Auto play pronunciation when card is flipped to English
   useEffect(() => {
-    if (isFlipped && currentPhrase && !isSpeaking) {
+    if (isFlipped && currentCollocation && !isSpeaking) {
       handleSpeak();
     }
-  }, [isFlipped, currentPhrase?.id]);
+  }, [isFlipped, currentIndex]);
+
+  // Get translation for current collocation if not already cached
+  useEffect(() => {
+    const getTranslation = async () => {
+      if (!currentCollocation) return;
+      
+      // Skip if we already have a translation
+      if (collocationTranslations[currentCollocation]) return;
+      
+      setIsTranslating(true);
+      try {
+        const translation = await translateText(currentCollocation);
+        setCollocationTranslations(prev => ({
+          ...prev,
+          [currentCollocation]: translation
+        }));
+      } catch (error) {
+        console.error('Translation error:', error);
+        setCollocationTranslations(prev => ({
+          ...prev,
+          [currentCollocation]: 'Không thể dịch'
+        }));
+      } finally {
+        setIsTranslating(false);
+      }
+    };
+    
+    getTranslation();
+  }, [currentIndex, currentCollocation]);
 
   const toggleFlip = () => {
     setFlashcardState(prev => ({ ...prev, isFlipped: !prev.isFlipped }));
@@ -28,7 +62,7 @@ const Step2Flashcards = () => {
   };
 
   const handleNext = () => {
-    if (currentIndex < (analysisResult?.phrases.length || 0) - 1) {
+    if (currentIndex < (collocations.length || 0) - 1) {
       setFlashcardState({ currentIndex: currentIndex + 1, isFlipped: false });
       setShowHint(false);
     } else {
@@ -45,11 +79,11 @@ const Step2Flashcards = () => {
   };
 
   const handleSpeak = async () => {
-    if (!currentPhrase || isSpeaking) return;
+    if (!currentCollocation || isSpeaking) return;
     
     setIsSpeaking(true);
     try {
-      await speakText(currentPhrase.english, selectedVoice);
+      await speakText(currentCollocation, selectedVoice);
     } catch (error) {
       console.error('Speech error:', error);
     } finally {
@@ -58,27 +92,36 @@ const Step2Flashcards = () => {
   };
 
   const toggleMarked = () => {
-    if (!currentPhrase) return;
+    if (!currentCollocation) return;
+    // Use the collocation string as the key for marking
     setMarkedCards(prev => ({
       ...prev,
-      [currentPhrase.id]: !prev[currentPhrase.id]
+      [currentCollocation]: !prev[currentCollocation]
     }));
   };
 
-  if (!analysisResult || !currentPhrase) {
-    return <div>Loading flashcards...</div>;
+  if (!analysisResult || !currentCollocation) {
+    return (
+      <div className="flex flex-col justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-center text-gray-500">
+          Đang tải dữ liệu...
+        </p>
+      </div>
+    );
   }
 
-  const progress = ((currentIndex + 1) / analysisResult.phrases.length) * 100;
-  const isCardMarked = markedCards[currentPhrase.id] || false;
+  const progress = ((currentIndex + 1) / collocations.length) * 100;
+  const isCardMarked = markedCards[currentCollocation] || false;
+  const currentTranslation = collocationTranslations[currentCollocation] || '';
 
   return (
     <div className="max-w-3xl mx-auto">
       <Card className="glass-card p-6 mb-6">
         <div className="mb-6 text-center">
-          <h2 className="text-2xl font-bold text-gradient mb-2">Bước 2: Flashcard (Input)</h2>
+          <h2 className="text-2xl font-bold text-gradient mb-2">Bước 2: Flashcard Collocations</h2>
           <p className="text-gray-600">
-            Học cụm từ tiếng Anh và nghĩa tiếng Việt bằng phương pháp thẻ ghi nhớ
+            Học các cụm từ cố định (collocations) bằng phương pháp thẻ ghi nhớ
           </p>
         </div>
 
@@ -128,14 +171,14 @@ const Step2Flashcards = () => {
                       </div>
                     )}
                     
-                    <div className="text-xs uppercase tracking-wider text-gray-400 mb-1">TIẾNG ANH</div>
+                    <div className="text-xs uppercase tracking-wider text-gray-400 mb-1">COLLOCATION (TIẾNG ANH)</div>
                     <motion.h3 
                       className="text-2xl md:text-3xl font-bold text-hamaspeak-blue text-center"
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: 0.2, duration: 0.3 }}
                     >
-                      {currentPhrase.english}
+                      {currentCollocation}
                     </motion.h3>
                     
                     <motion.div 
@@ -182,27 +225,35 @@ const Step2Flashcards = () => {
                     )}
                     
                     <div className="text-xs uppercase tracking-wider text-gray-400 mb-1">NGHĨA TIẾNG VIỆT</div>
-                    <motion.h3 
-                      className="text-2xl md:text-3xl font-bold text-hamaspeak-purple text-center relative"
-                      initial={{ scale: 0.9 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.2, duration: 0.3 }}
-                    >
-                      {currentPhrase.vietnamese}
-                      
-                      {/* Show hint button for Vietnamese side */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute -right-8 -top-1 h-8 w-8 rounded-full p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowHint(!showHint);
-                        }}
+                    
+                    {isTranslating ? (
+                      <div className="flex justify-center items-center h-20">
+                        <Loader2 className="h-6 w-6 animate-spin text-hamaspeak-purple mr-2" />
+                        <p className="text-gray-500">Đang dịch...</p>
+                      </div>
+                    ) : (
+                      <motion.h3 
+                        className="text-2xl md:text-3xl font-bold text-hamaspeak-purple text-center relative"
+                        initial={{ scale: 0.9 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, duration: 0.3 }}
                       >
-                        <Eye className="h-4 w-4 text-gray-400" />
-                      </Button>
-                    </motion.h3>
+                        {currentTranslation}
+                        
+                        {/* Show hint button for Vietnamese side */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute -right-8 -top-1 h-8 w-8 rounded-full p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowHint(!showHint);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        </Button>
+                      </motion.h3>
+                    )}
                     
                     {/* Hint section */}
                     <AnimatePresence>
@@ -213,7 +264,7 @@ const Step2Flashcards = () => {
                           exit={{ opacity: 0, height: 0 }}
                           className="mt-4 text-gray-500 text-sm bg-gray-50 rounded-md p-2"
                         >
-                          <div className="font-medium text-gray-600">{currentPhrase.english}</div>
+                          <div className="font-medium text-gray-600">{currentCollocation}</div>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -270,7 +321,7 @@ const Step2Flashcards = () => {
             className="flex items-center justify-center gap-2 bg-gradient-to-r from-hamaspeak-blue to-hamaspeak-purple hover:opacity-90 transition-all"
           >
             <span className="sm:inline hidden">
-              {currentIndex < analysisResult.phrases.length - 1 
+              {currentIndex < collocations.length - 1 
                 ? 'Tiếp theo' 
                 : 'Hoàn thành'}
             </span>
@@ -281,14 +332,14 @@ const Step2Flashcards = () => {
       
       {/* Card navigation dots */}
       <div className="flex flex-wrap justify-center items-center gap-1 mb-6">
-        {analysisResult.phrases.map((phrase, idx) => (
+        {collocations.map((collocation, idx) => (
           <button
             key={idx}
             onClick={() => setFlashcardState({ currentIndex: idx, isFlipped: false })}
             className={`w-3 h-3 rounded-full transition-all ${
               idx === currentIndex 
                 ? 'bg-hamaspeak-blue scale-125' 
-                : markedCards[phrase.id]
+                : markedCards[collocation]
                   ? 'bg-green-400'
                   : idx < currentIndex 
                     ? 'bg-gray-400' 
@@ -301,7 +352,7 @@ const Step2Flashcards = () => {
       
       {/* Current card indicator */}
       <div className="text-center text-gray-500 text-sm">
-        Thẻ {currentIndex + 1} / {analysisResult.phrases.length}
+        Thẻ {currentIndex + 1} / {collocations.length}
         {Object.values(markedCards).filter(Boolean).length > 0 && (
           <span className="ml-2 text-green-500">
             (Đã thuộc: {Object.values(markedCards).filter(Boolean).length})

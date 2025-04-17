@@ -1,0 +1,28 @@
+{
+  "name": "gemini-agent",
+  "version": "1.0.0",
+  "description": "Agent thông minh trích xuất collocations sử dụng Gemini 2.0 API",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "gemini",
+    "ai",
+    "collocations",
+    "nlp",
+    "agent"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

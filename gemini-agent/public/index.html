@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Collocation Agent</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      margin-top: 20px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      margin-right: 10px;
+      color: #8e24aa;
+    }
+    h1 {
+      color: #4a4a4a;
+      font-size: 1.8rem;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 150px;
+    }
+    #result {
+      margin-top: 20px;
+      border-radius: 5px;
+      padding: 20px;
+      background-color: #f0f8ff;
+      display: none;
+    }
+    .collocation-item {
+      background-color: #e6f7ff;
+      border-radius: 20px;
+      padding: 5px 12px;
+      margin: 5px;
+      display: inline-block;
+      font-size: 14px;
+    }
+    .loading {
+      text-align: center;
+      display: none;
+      margin: 20px 0;
+    }
+    .spinner-border {
+      width: 3rem;
+      height: 3rem;
+      color: #8e24aa;
+    }
+    .sample-text {
+      font-size: 0.85rem;
+      color: #6c757d;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🤖</div>
+      <h1>Gemini Collocation Agent</h1>
+    </div>
+    
+    <div class="mb-3">
+      <label for="textInput" class="form-label">Nhập đoạn văn để trích xuất collocations:</label>
+      <textarea id="textInput" class="form-control" placeholder="Nhập văn bản của bạn tại đây..."></textarea>
+      <div class="mt-2">
+        <span class="sample-text" onclick="loadSampleText()">Dùng văn bản mẫu</span>
+      </div>
+    </div>
+    
+    <button id="extractBtn" class="btn btn-primary" onclick="extractCollocations()">
+      Trích xuất Collocations
+    </button>
+    
+    <div class="loading" id="loading">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2">Đang phân tích văn bản...</p>
+    </div>
+    
+    <div id="result">
+      <h5>Các collocations được tìm thấy: <span id="collocationsCount">0</span></h5>
+      <div id="collocationsContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    // Trích xuất collocations từ văn bản
+    async function extractCollocations() {
+      const textInput = document.getElementById('textInput').value.trim();
+      
+      if (!textInput) {
+        alert('Vui lòng nhập văn bản để trích xuất collocations');
+        return;
+      }
+      
+      // Hiển thị loading
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('result').style.display = 'none';
+      document.getElementById('extractBtn').disabled = true;
+      
+      try {
+        const response = await fetch('/api/extract', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: textInput }),
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          const { collocations, count } = result.data;
+          
+          // Hiển thị kết quả
+          document.getElementById('collocationsCount').textContent = count;
+          
+          const container = document.getElementById('collocationsContainer');
+          container.innerHTML = '';
+          
+          collocations.forEach(collocation => {
+            const item = document.createElement('div');
+            item.className = 'collocation-item';
+            item.textContent = collocation;
+            container.appendChild(item);
+          });
+          
+          document.getElementById('result').style.display = 'block';
+        } else {
+          alert(`Lỗi: ${result.error}`);
+        }
+      } catch (error) {
+        alert(`Lỗi khi gọi API: ${error.message}`);
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('extractBtn').disabled = false;
+      }
+    }
+    
+    // Nạp văn bản mẫu
+    function loadSampleText() {
+      document.getElementById('textInput').value = `There was a time when I was unsure about participating in an English speaking contest at my high school. At first, I hesitated because I didn't feel confident in my English skills and was worried about making mistakes in front of my classmates and teachers. However, after thinking it over, I decided to take part because I believed it was a great opportunity to overcome my fear and improve my language abilities.`;
+    }
+  </script>
+</body>
+</html> 
