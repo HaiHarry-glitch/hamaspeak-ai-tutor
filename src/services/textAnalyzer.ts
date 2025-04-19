@@ -1,5 +1,6 @@
 import { segmentTextIntoPhrases, translateText, generateFillInTheBlanks } from '@/utils/speechUtils';
 import { extractCollocations, CollocationResult } from '@/utils/collocationUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface AnalyzedPhrase {
   id: string;
@@ -49,7 +50,7 @@ const getIpaForPhrase = async (phrase: string): Promise<string> => {
         "important": "ɪmˈpɔːrtənt",
         "our": "ˈaʊər",
         "also": "ˈɔːlsoʊ",
-        "language": "ˈlæŋɡwɪdʒ",
+        "language": "ˈlængwɪdʒ",
         "english": "ˈɪŋɡlɪʃ",
         "practice": "ˈpræktɪs",
         "speak": "spiːk",
@@ -75,25 +76,23 @@ export const analyzeText = async (text: string): Promise<TextAnalysisResult> => 
     const analyzedPhrases: AnalyzedPhrase[] = [];
     
     for (const [index, phrase] of phrases.entries()) {
-      // Skip empty or very short phrases
       if (phrase.trim().length < 2) continue;
       
-      // Get Vietnamese translation using the improved translation function
-      const translation = await translateText(phrase);
+      // Get Vietnamese translation and collocation analysis
+      const collocationAnalysis = await supabase.functions.invoke('language-analysis', {
+        body: { text: phrase, type: 'collocations' }
+      });
       
       // Create fill-in-the-blanks version
       const fillInBlanks = generateFillInTheBlanks(phrase);
       
-      // Get IPA transcription
-      const ipa = await getIpaForPhrase(phrase);
-      
       analyzedPhrases.push({
         id: `phrase-${index}`,
         english: phrase,
-        vietnamese: translation,
+        vietnamese: collocationAnalysis.data?.translation || await translateText(phrase),
         fillInBlanks: fillInBlanks,
         attempts: 0,
-        ipa: ipa
+        ipa: await getIpaForPhrase(phrase)
       });
     }
     
@@ -102,43 +101,40 @@ export const analyzeText = async (text: string): Promise<TextAnalysisResult> => 
     const analyzedSentences: AnalyzedSentence[] = [];
     
     for (const [index, sentence] of sentences.entries()) {
-      // Skip very short sentences
       if (sentence.length < 5) continue;
       
-      // Get Vietnamese translation
-      const translation = await translateText(sentence);
-      
-      // Create fill-in-the-blanks version
-      const fillInBlanks = generateFillInTheBlanks(sentence);
-      
-      // Get IPA transcription
-      const ipa = await getIpaForPhrase(sentence);
+      const collocationAnalysis = await supabase.functions.invoke('language-analysis', {
+        body: { text: sentence, type: 'collocations' }
+      });
       
       analyzedSentences.push({
         id: `sentence-${index}`,
         english: sentence,
-        vietnamese: translation,
-        fillInBlanks,
+        vietnamese: collocationAnalysis.data?.translation || await translateText(sentence),
+        fillInBlanks: generateFillInTheBlanks(sentence),
         attempts: 0,
-        ipa: ipa
+        ipa: await getIpaForPhrase(sentence)
       });
     }
 
     // Extract collocations from the text
     let collocations: string[] = [];
     try {
-      const collocationsResult = await extractCollocations(text);
-      collocations = collocationsResult.collocations;
+      const collocationsResult = await supabase.functions.invoke('language-analysis', {
+        body: { text, type: 'collocations' }
+      });
+      collocations = collocationsResult.data?.analysis?.split('\n')
+        .filter(line => line.trim())
+        .map(line => line.split(':')[0].trim()) || [];
     } catch (error) {
       console.error('Error extracting collocations:', error);
-      // Continue with empty collocations if there's an error
     }
     
     return {
       originalText: text,
       phrases: analyzedPhrases,
       sentences: analyzedSentences,
-      collocations: collocations
+      collocations
     };
   } catch (error) {
     console.error('Error analyzing text:', error);
