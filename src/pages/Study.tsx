@@ -8,6 +8,7 @@ import Step1Listening from '@/components/study/Step1Listening';
 import Step2Flashcards from '@/components/study/Step2Flashcards';
 import Step3EnglishSpeaking from '@/components/study/Step3EnglishSpeaking';
 import Step4VietnameseSpeaking from '@/components/study/Step4VietnameseSpeaking';
+import Step4FullSpeaking from '@/components/study/Step4FullSpeaking';
 import Step5FillBlanks from '@/components/study/Step5FillBlanks';
 import Step6ListeningComprehension from '@/components/study/Step6ListeningComprehension';
 import Step7ParagraphSpeaking from '@/components/study/Step7ParagraphSpeaking';
@@ -22,9 +23,6 @@ import Header from '@/components/Header';
 import { Loader2 } from 'lucide-react';
 import SpeechService, { PronunciationResult } from '@/services/speechService';
 import { PronunciationComponentProps } from '@/components/study/studyComponentProps';
-
-// Fix: Define the prop types for components that need pronunciation support
-type StepComponentProps = React.ComponentProps<typeof Step3EnglishSpeaking>;
 
 const StudyContent = () => {
   const { 
@@ -64,7 +62,7 @@ const StudyContent = () => {
     }
   };
 
-  // Create a type-safe props object for the pronunciation components
+  // Create a props object for the pronunciation components
   const pronunciationProps: PronunciationComponentProps = {
     onAnalyzePronunciation: handleAnalyzePronunciation
   };
@@ -114,24 +112,25 @@ const StudyContent = () => {
         {currentStep === 1 && <Step1Listening />}
         {currentStep === 2 && <Step2Flashcards />}
         {currentStep === 3 && (
-          <Step3EnglishSpeaking {...(pronunciationProps as StepComponentProps)} />
+          <Step3EnglishSpeaking onAnalyzePronunciation={pronunciationProps.onAnalyzePronunciation} />
         )}
         {currentStep === 4 && (
-          <Step4VietnameseSpeaking {...(pronunciationProps as React.ComponentProps<typeof Step4VietnameseSpeaking>)} />
+          <Step4VietnameseSpeaking onAnalyzePronunciation={pronunciationProps.onAnalyzePronunciation} />
         )}
+        {currentStep === 4.5 && <Step4FullSpeaking />}
         
         {/* Output steps (5-8) */}
         {currentStep === 5 && (
-          <Step5FillBlanks {...(pronunciationProps as React.ComponentProps<typeof Step5FillBlanks>)} />
+          <Step5FillBlanks onAnalyzePronunciation={pronunciationProps.onAnalyzePronunciation} />
         )}
         {currentStep === 6 && (
-          <Step6ListeningComprehension {...(pronunciationProps as React.ComponentProps<typeof Step6ListeningComprehension>)} />
+          <Step6ListeningComprehension onAnalyzePronunciation={pronunciationProps.onAnalyzePronunciation} />
         )}
         {currentStep === 7 && (
-          <Step7ParagraphSpeaking {...(pronunciationProps as React.ComponentProps<typeof Step7ParagraphSpeaking>)} />
+          <Step7ParagraphSpeaking onAnalyzePronunciation={pronunciationProps.onAnalyzePronunciation} />
         )}
         {currentStep === 8 && (
-          <Step8CompleteSpeaking {...(pronunciationProps as React.ComponentProps<typeof Step8CompleteSpeaking>)} />
+          <Step8CompleteSpeaking onAnalyzePronunciation={pronunciationProps.onAnalyzePronunciation} />
         )}
         
         <AuthModal 
