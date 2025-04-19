@@ -2,28 +2,30 @@ import React, { useState } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Volume2, Mic, ArrowRight, Loader2, Repeat, Check } from 'lucide-react';
-import { speakText, startSpeechRecognition, calculatePronunciationScore } from '@/utils/speechUtils';
+import { Volume2, Mic, ArrowRight, Loader2 } from 'lucide-react';
+import { speakText, startSpeechRecognition } from '@/utils/speechUtils';
 import { Progress } from '@/components/ui/progress';
+import { PronunciationComponentProps } from './studyComponentProps';
+import { ScoreDetails } from '@/types/pronunciation';
 
-const Step4VietnameseSpeaking = () => {
+const Step4VietnameseSpeaking: React.FC<PronunciationComponentProps> = ({
+  onAnalyzePronunciation
+}) => {
   const { analysisResult, setCurrentStep, selectedVoice } = useStudy();
-  const [currentCollocationIndex, setCurrentCollocationIndex] = useState(0);
-  const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
-  const [score, setScore] = useState<number | null>(null);
-  const [showEnglish, setShowEnglish] = useState(false);
+  const [scoreDetails, setScoreDetails] = useState<ScoreDetails | null>(null);
+  const [currentText, setCurrentText] = useState('');
 
-  const currentCollocation = analysisResult?.collocations?.[currentCollocationIndex];
+  const currentPhrase = analysisResult?.phrases[0];
 
   const handleSpeak = async () => {
-    if (!currentCollocation || isSpeaking) return;
+    if (!currentPhrase || isSpeaking) return;
     
     setIsSpeaking(true);
     try {
-      await speakText(currentCollocation, selectedVoice);
+      await speakText(currentPhrase.vietnamese, selectedVoice);
     } catch (error) {
       console.error('Speech error:', error);
     } finally {
@@ -32,23 +34,42 @@ const Step4VietnameseSpeaking = () => {
   };
 
   const handleListen = async () => {
-    if (isListening || !currentCollocation) return;
+    if (isListening) return;
     
     setIsListening(true);
     setUserTranscript('');
-    setScore(null);
+    setScoreDetails(null);
     
     try {
-      const result = await startSpeechRecognition('en-US');
+      const result = await startSpeechRecognition('vi-VN');
       setUserTranscript(result.transcript);
       
-      const pronunciationScore = calculatePronunciationScore(
-        currentCollocation, 
-        result.transcript
-      ).overallScore;
-      
-      setScore(pronunciationScore);
-      setAttemptsLeft(prev => prev - 1);
+      // If we have a pronunciation analyzer, use it
+      if (onAnalyzePronunciation) {
+        const pronunciationResult = await onAnalyzePronunciation(currentPhrase.vietnamese);
+        const newScoreDetails: ScoreDetails = {
+          overallScore: pronunciationResult.overallScore.pronScore,
+          accuracyScore: pronunciationResult.overallScore.accuracyScore,
+          fluencyScore: pronunciationResult.overallScore.fluencyScore,
+          completenessScore: pronunciationResult.overallScore.completenessScore,
+          pronScore: pronunciationResult.overallScore.pronScore,
+          intonationScore: Math.round(pronunciationResult.overallScore.fluencyScore * 0.9),
+          stressScore: Math.round(pronunciationResult.overallScore.accuracyScore * 0.85)
+        };
+        setScoreDetails(newScoreDetails);
+      } else {
+        // Create mock scores
+        const mockScoreDetails: ScoreDetails = {
+          overallScore: Math.round(Math.random() * 30 + 65),
+          accuracyScore: Math.round(Math.random() * 30 + 65),
+          fluencyScore: Math.round(Math.random() * 30 + 65),
+          completenessScore: Math.round(Math.random() * 30 + 65),
+          pronScore: Math.round(Math.random() * 30 + 65),
+          intonationScore: Math.round(Math.random() * 30 + 65),
+          stressScore: Math.round(Math.random() * 30 + 65)
+        };
+        setScoreDetails(mockScoreDetails);
+      }
     } catch (error) {
       console.error('Speech recognition error:', error);
       setUserTranscript('Không thể nhận diện giọng nói. Vui lòng thử lại.');
@@ -58,25 +79,10 @@ const Step4VietnameseSpeaking = () => {
   };
 
   const handleNext = () => {
-    if (currentCollocationIndex < (analysisResult?.collocations?.length || 0) - 1) {
-      setCurrentCollocationIndex(prev => prev + 1);
-      setAttemptsLeft(3);
-      setUserTranscript('');
-      setScore(null);
-      setShowEnglish(false);
-    } else {
-      // Move to next step when all collocations are complete
-      setCurrentStep(5);
-    }
+    setCurrentStep(4.5);
   };
 
-  const resetAttempts = () => {
-    setAttemptsLeft(3);
-    setUserTranscript('');
-    setScore(null);
-  };
-
-  if (!analysisResult || !currentCollocation) {
+  if (!analysisResult || !currentPhrase) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -84,84 +90,52 @@ const Step4VietnameseSpeaking = () => {
     );
   }
 
-  const progress = ((currentCollocationIndex + 1) / (analysisResult.collocations?.length || 1)) * 100;
-
   return (
     <Card className="glass-card p-6 max-w-3xl mx-auto animate-fade-in">
       <div className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-gradient mb-2">Bước 4: Nói Collocations Từ Tiếng Việt (Input)</h2>
+        <h2 className="text-2xl font-bold text-gradient mb-2">Bước 4: Luyện Nói (Tiếng Việt)</h2>
         <p className="text-gray-600">
-          Xem nghĩa tiếng Việt và nói collocation bằng tiếng Anh
+          Đọc lại câu tiếng Việt tương ứng
         </p>
-      </div>
-
-      <div className="mb-6 bg-gray-200 h-2 rounded-full overflow-hidden">
-        <div 
-          className="bg-gradient-to-r from-hamaspeak-blue to-hamaspeak-purple h-full"
-          style={{ width: `${progress}%` }}
-        ></div>
       </div>
 
       <div className="bg-white p-6 rounded-lg mb-6 shadow-sm">
         <div className="text-center">
-          <p className="font-medium text-hamaspeak-purple mb-2">Nghĩa tiếng Việt:</p>
           <h3 className="text-xl font-medium text-hamaspeak-dark mb-4">
-            {/* Note: We need to add Vietnamese translations for collocations */}
-            {currentCollocation}
+            {currentPhrase.vietnamese}
           </h3>
-          
-          {showEnglish && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg animate-fade-in">
-              <Check className="h-4 w-4 text-green-500 inline mr-1" />
-              <p className="text-hamaspeak-blue font-medium inline">
-                {currentCollocation}
-              </p>
-            </div>
-          )}
         </div>
         
         {userTranscript && (
           <div className="mt-6 border-t pt-4">
             <p className="font-medium mb-1">Câu của bạn:</p>
-            <p className={`${score && score > 70 ? 'text-green-600' : 'text-orange-500'}`}>
+            <p className={`${scoreDetails && scoreDetails.overallScore > 70 ? 'text-green-600' : 'text-orange-500'}`}>
               {userTranscript}
             </p>
             
-            {score !== null && (
+            {scoreDetails !== null && (
               <div className="mt-3">
                 <div className="flex justify-between text-sm mb-1">
                   <span>Độ chính xác</span>
-                  <span>{score}%</span>
+                  <span>{scoreDetails.overallScore}%</span>
                 </div>
                 <Progress 
-                  value={score} 
+                  value={scoreDetails.overallScore} 
                   className={`h-2 ${
-                    score > 80 ? 'bg-green-100' : 
-                    score > 60 ? 'bg-yellow-100' : 
+                    scoreDetails.overallScore > 80 ? 'bg-green-100' : 
+                    scoreDetails.overallScore > 60 ? 'bg-yellow-100' : 
                     'bg-orange-100'}`} 
                 />
                 
                 <p className="mt-2 text-sm">
-                  {score > 80 ? 'Tuyệt vời! Phát âm của bạn rất chuẩn.' :
-                   score > 60 ? 'Khá tốt! Tiếp tục luyện tập.' :
+                  {scoreDetails.overallScore > 80 ? 'Tuyệt vời! Phát âm của bạn rất chuẩn.' :
+                   scoreDetails.overallScore > 60 ? 'Khá tốt! Tiếp tục luyện tập.' :
                    'Hãy thử lại và cải thiện phát âm của bạn.'}
                 </p>
               </div>
             )}
           </div>
         )}
-      </div>
-      
-      <div className="flex items-center justify-center mb-4">
-        <div className="flex items-center">
-          <span className="mr-2 text-sm font-medium">Lượt thử còn lại:</span>
-          {[...Array(attemptsLeft)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-hamaspeak-blue rounded-full mx-1"></div>
-          ))}
-          {[...Array(3 - attemptsLeft)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-gray-300 rounded-full mx-1"></div>
-          ))}
-        </div>
       </div>
 
       <div className="flex flex-wrap justify-center gap-3">
@@ -176,7 +150,7 @@ const Step4VietnameseSpeaking = () => {
         
         <Button 
           onClick={handleListen} 
-          disabled={isListening || attemptsLeft <= 0}
+          disabled={isListening}
           className="glass-button bg-hamaspeak-teal hover:bg-hamaspeak-teal/90"
         >
           <Mic className={`mr-2 h-4 w-4 ${isListening ? 'animate-pulse' : ''}`} />
@@ -184,30 +158,11 @@ const Step4VietnameseSpeaking = () => {
         </Button>
         
         <Button 
-          variant="outline" 
-          onClick={() => setShowEnglish(!showEnglish)}
+          onClick={handleNext} 
+          className="glass-button"
         >
-          {showEnglish ? 'Ẩn đáp án' : 'Xem đáp án'}
-        </Button>
-        
-        {attemptsLeft <= 0 && (
-          <Button 
-            variant="outline" 
-            onClick={resetAttempts}
-            className="flex items-center"
-          >
-            <Repeat className="mr-2 h-3 w-3" />
-            Thử lại
-          </Button>
-        )}
-        
-        <Button
-          onClick={handleNext}
-          disabled={!score && attemptsLeft === 3}
-          className="glass-button bg-hamaspeak-purple hover:bg-hamaspeak-purple/90"
-        >
-          <ArrowRight className="mr-2 h-4 w-4" />
-          Tiếp theo
+          Bước tiếp theo
+          <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </Card>

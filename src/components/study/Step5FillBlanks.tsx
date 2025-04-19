@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Volume2, Mic, ArrowRight, Loader2, Info, Check } from 'lucide-react';
+import { Volume2, Mic, ArrowRight, Loader2, Check } from 'lucide-react';
 import { speakText, startSpeechRecognition } from '@/utils/speechUtils';
 import { Progress } from '@/components/ui/progress';
-import PronunciationFeedback from './PronunciationFeedback';
-import WordPronunciationPractice from './WordPronunciationPractice';
 import { PronunciationComponentProps } from './studyComponentProps';
-import { ScoreDetails, WordFeedback } from '@/types/pronunciation';
+import { ScoreDetails } from '@/types/pronunciation';
 
 const Step5FillBlanks: React.FC<PronunciationComponentProps> = ({
   onAnalyzePronunciation
@@ -19,15 +17,27 @@ const Step5FillBlanks: React.FC<PronunciationComponentProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
   const [scoreDetails, setScoreDetails] = useState<ScoreDetails | null>(null);
-  const [attemptsLeft, setAttemptsLeft] = useState(3);
+  const [filledBlanks, setFilledBlanks] = useState<string[]>([]);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [wordErrors, setWordErrors] = useState<Array<{word: string; ipa: string}>>([]);
-  const [showPronunciationFeedback, setShowPronunciationFeedback] = useState(false);
-  const [practicingWord, setPracticingWord] = useState<{word: string; ipa: string} | null>(null);
-
-  const currentPhrase = analysisResult?.phrases[currentPhraseIndex];
   
+  // For simple UI display
   const score = scoreDetails?.overallScore || null;
+
+  const currentPhrase = analysisResult?.phrases?.[currentPhraseIndex];
+  
+  // Extract blanks from the fill-in-the-blanks text
+  const blanksText = currentPhrase?.fillInBlanks || '';
+  const blanksCount = (blanksText.match(/___/g) || []).length;
+  
+  // Initialize filled blanks array when phrase changes
+  useEffect(() => {
+    if (currentPhrase) {
+      setFilledBlanks(Array(blanksCount).fill(''));
+      setShowAnswer(false);
+      setUserTranscript('');
+      setScoreDetails(null);
+    }
+  }, [currentPhraseIndex, currentPhrase]);
 
   const handleSpeak = async () => {
     if (!currentPhrase || isSpeaking) return;
@@ -53,61 +63,42 @@ const Step5FillBlanks: React.FC<PronunciationComponentProps> = ({
       const result = await startSpeechRecognition('en-US');
       setUserTranscript(result.transcript);
       
+      // If we have a pronunciation analyzer, use it
       if (onAnalyzePronunciation) {
         const pronunciationResult = await onAnalyzePronunciation(currentPhrase.english);
-        
-        const detailedScore: ScoreDetails = {
+        const newScoreDetails: ScoreDetails = {
           overallScore: pronunciationResult.overallScore.pronScore,
           accuracyScore: pronunciationResult.overallScore.accuracyScore,
           fluencyScore: pronunciationResult.overallScore.fluencyScore,
           completenessScore: pronunciationResult.overallScore.completenessScore,
-          pronScore: pronunciationResult.overallScore.pronScore,
-          intonationScore: Math.round(pronunciationResult.overallScore.fluencyScore * 0.9 + Math.random() * 10),
-          stressScore: Math.round(pronunciationResult.overallScore.accuracyScore * 0.85 + Math.random() * 15),
-          rhythmScore: Math.round((pronunciationResult.overallScore.fluencyScore + pronunciationResult.overallScore.accuracyScore) / 2)
+          pronScore: pronunciationResult.overallScore.pronScore
         };
-        
-        setScoreDetails(detailedScore);
-        
-        if (pronunciationResult.words && pronunciationResult.words.length > 0) {
-          const errorWordsList = pronunciationResult.words
-            .filter(word => word.accuracyScore < 70)
-            .map(word => ({
-              word: word.word,
-              ipa: `/ˈmɒk/`
-            }));
-          
-          setWordErrors(errorWordsList);
-        }
+        setScoreDetails(newScoreDetails);
       } else {
-        const mockScore: ScoreDetails = {
+        // Create mock scores
+        const mockScoreDetails: ScoreDetails = {
           overallScore: Math.round(Math.random() * 30 + 65),
           accuracyScore: Math.round(Math.random() * 30 + 65),
           fluencyScore: Math.round(Math.random() * 30 + 65),
           completenessScore: Math.round(Math.random() * 30 + 65),
-          pronScore: Math.round(Math.random() * 30 + 65),
-          intonationScore: Math.round(Math.random() * 30 + 65),
-          stressScore: Math.round(Math.random() * 30 + 65),
-          rhythmScore: Math.round(Math.random() * 30 + 65)
+          pronScore: Math.round(Math.random() * 30 + 65)
         };
-        
-        setScoreDetails(mockScore);
-        
-        if (mockScore.overallScore < 80) {
-          const errorWordsList = currentPhrase.english
-            .split(' ')
-            .filter(() => Math.random() > 0.7)
-            .slice(0, 2)
-            .map(word => ({
-              word: word.replace(/[,.!?;:]/g, ''),
-              ipa: `/ˈmɒk/`
-            }));
-            
-          setWordErrors(errorWordsList);
-        }
+        setScoreDetails(mockScoreDetails);
       }
       
-      setAttemptsLeft(prev => prev - 1);
+      // Try to fill in the blanks based on the transcript
+      const words = result.transcript.toLowerCase().split(' ');
+      const blankPositions = findBlankPositions(blanksText);
+      
+      // Simple algorithm to fill blanks - can be improved
+      const newFilledBlanks = [...filledBlanks];
+      blankPositions.forEach((pos, index) => {
+        if (words[pos] && index < newFilledBlanks.length) {
+          newFilledBlanks[index] = words[pos];
+        }
+      });
+      
+      setFilledBlanks(newFilledBlanks);
     } catch (error) {
       console.error('Speech recognition error:', error);
       setUserTranscript('Không thể nhận diện giọng nói. Vui lòng thử lại.');
@@ -117,55 +108,54 @@ const Step5FillBlanks: React.FC<PronunciationComponentProps> = ({
   };
 
   const handleNext = () => {
-    if (currentPhraseIndex < (analysisResult?.phrases.length || 0) - 1) {
+    if (currentPhraseIndex < (analysisResult?.phrases?.length || 0) - 1) {
       setCurrentPhraseIndex(prev => prev + 1);
-      setAttemptsLeft(3);
-      setUserTranscript('');
-      setScoreDetails(null);
-      setShowAnswer(false);
-      setShowPronunciationFeedback(false);
-      setWordErrors([]);
     } else {
+      // Move to next step when all phrases are complete
       setCurrentStep(6);
     }
   };
 
-  const resetAttempts = () => {
-    setAttemptsLeft(3);
-    setUserTranscript('');
-    setScoreDetails(null);
-    setShowPronunciationFeedback(false);
+  // Helper function to find positions of blanks in the text
+  const findBlankPositions = (text: string): number[] => {
+    const words = text.split(' ');
+    return words.reduce((positions: number[], word, index) => {
+      if (word === '___') {
+        positions.push(index);
+      }
+      return positions;
+    }, []);
   };
 
-  const handlePracticeWord = (word: string) => {
-    const wordObj = wordErrors.find(w => w.word === word);
-    if (wordObj) {
-      setPracticingWord(wordObj);
-    }
-  };
-
-  const handleWordPlayReference = async (word: string) => {
-    setIsSpeaking(true);
-    try {
-      await speakText(word, selectedVoice);
-    } catch (error) {
-      console.error('Speech error:', error);
-    } finally {
-      setIsSpeaking(false);
-    }
-  };
-
-  const handleWordListen = async (word: string): Promise<{ transcript: string; score: number }> => {
-    try {
-      const result = await startSpeechRecognition('en-US');
-      return { 
-        transcript: result.transcript, 
-        score: Math.round(Math.random() * 30 + 65) 
-      };
-    } catch (error) {
-      console.error('Speech recognition error:', error);
-      return { transcript: 'Không thể nhận diện', score: 0 };
-    }
+  // Render the fill-in-the-blanks text with user inputs
+  const renderFillBlanksText = () => {
+    if (!blanksText) return null;
+    
+    const parts = blanksText.split('___');
+    
+    return (
+      <div className="text-lg">
+        {parts.map((part, i) => (
+          <React.Fragment key={i}>
+            {part}
+            {i < parts.length - 1 && (
+              <input
+                type="text"
+                value={filledBlanks[i] || ''}
+                onChange={(e) => {
+                  const newFilledBlanks = [...filledBlanks];
+                  newFilledBlanks[i] = e.target.value;
+                  setFilledBlanks(newFilledBlanks);
+                }}
+                className="mx-1 px-2 py-1 border-b-2 border-hamaspeak-blue focus:border-hamaspeak-purple outline-none w-24 text-center"
+                placeholder="..."
+                disabled={showAnswer}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    );
   };
 
   if (!analysisResult || !currentPhrase) {
@@ -176,22 +166,14 @@ const Step5FillBlanks: React.FC<PronunciationComponentProps> = ({
     );
   }
 
-  const progress = ((currentPhraseIndex + 1) / analysisResult.phrases.length) * 100;
-
-  const feedbackData: WordFeedback[] = wordErrors.map(wordError => ({
-    word: wordError.word,
-    ipa: wordError.ipa,
-    correct: false,
-    suggestedIpa: wordError.ipa,
-    videoTutorialUrl: '#'
-  }));
+  const progress = ((currentPhraseIndex + 1) / (analysisResult.phrases?.length || 1)) * 100;
 
   return (
     <Card className="glass-card p-6 max-w-3xl mx-auto animate-fade-in">
       <div className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-gradient mb-2">Bước 5: Điền vào chỗ trống</h2>
+        <h2 className="text-2xl font-bold text-gradient mb-2">Bước 5: Điền Vào Chỗ Trống (Output)</h2>
         <p className="text-gray-600">
-          Nghe và hoàn thành các câu có từ bị khuyết
+          Nghe và điền từ vào chỗ trống để hoàn thành câu
         </p>
       </div>
 
@@ -203,17 +185,26 @@ const Step5FillBlanks: React.FC<PronunciationComponentProps> = ({
       </div>
 
       <div className="bg-white p-6 rounded-lg mb-6 shadow-sm">
-        <div className="mb-4 text-center">
-          <h3 className="text-xl font-medium text-hamaspeak-dark mb-2">
-            {currentPhrase.fillInBlanks}
-          </h3>
+        <div className="mb-4">
+          <p className="font-medium text-gray-600 mb-2">Tiếng Việt:</p>
+          <p className="text-lg text-hamaspeak-dark">{currentPhrase.vietnamese}</p>
+        </div>
+        
+        <div className="mt-6 border-t pt-4">
+          <p className="font-medium text-gray-600 mb-2">Điền vào chỗ trống:</p>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            {renderFillBlanksText()}
+          </div>
           
           {showAnswer && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <Check className="h-4 w-4 text-green-500 inline mr-1" />
-              <p className="text-hamaspeak-blue font-medium inline">
-                {currentPhrase.english}
-              </p>
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-start">
+                <Check className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
+                <div>
+                  <p className="font-medium text-green-700">Đáp án:</p>
+                  <p className="text-green-800">{currentPhrase.english}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -233,10 +224,7 @@ const Step5FillBlanks: React.FC<PronunciationComponentProps> = ({
                 </div>
                 <Progress 
                   value={score} 
-                  className={`h-2 ${
-                    score > 80 ? 'bg-green-100' : 
-                    score > 60 ? 'bg-yellow-100' : 
-                    'bg-orange-100'}`} 
+                  className="h-2" 
                 />
                 
                 <p className="mt-2 text-sm">
@@ -244,66 +232,10 @@ const Step5FillBlanks: React.FC<PronunciationComponentProps> = ({
                    score > 60 ? 'Khá tốt! Tiếp tục luyện tập.' :
                    'Hãy thử lại và cải thiện phát âm của bạn.'}
                 </p>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowPronunciationFeedback(!showPronunciationFeedback)}
-                  className="mt-2"
-                >
-                  <Info className="mr-2 h-4 w-4 text-blue-500" />
-                  {showPronunciationFeedback ? 'Ẩn phân tích chi tiết' : 'Xem phân tích chi tiết'}
-                </Button>
               </div>
             )}
           </div>
         )}
-      </div>
-      
-      {showPronunciationFeedback && scoreDetails && (
-        <PronunciationFeedback
-          scoreDetails={scoreDetails}
-          feedback={feedbackData}
-          onPracticeWord={handlePracticeWord}
-          onPlayReference={handleWordPlayReference}
-          transcript={userTranscript}
-          referenceText={currentPhrase.english}
-        />
-      )}
-      
-      {practicingWord && (
-        <div className="mb-6">
-          <WordPronunciationPractice
-            word={practicingWord.word}
-            ipa={practicingWord.ipa}
-            onClose={() => setPracticingWord(null)}
-            onPlayReference={handleWordPlayReference}
-            onListen={handleWordListen}
-            videoTutorialUrl="#"
-            examples={[
-              { 
-                text: `Example: ${practicingWord.word} is important.`, 
-                translation: `Ví dụ: ${practicingWord.word} là quan trọng.` 
-              }
-            ]}
-            tips={[
-              "Chú ý đến trọng âm của từ",
-              "Tập trung vào các nguyên âm chính xác"
-            ]}
-          />
-        </div>
-      )}
-      
-      <div className="flex items-center justify-center mb-4">
-        <div className="flex items-center">
-          <span className="mr-2 text-sm font-medium">Lượt thử còn lại:</span>
-          {[...Array(attemptsLeft)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-hamaspeak-blue rounded-full mx-1"></div>
-          ))}
-          {[...Array(3 - attemptsLeft)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-gray-300 rounded-full mx-1"></div>
-          ))}
-        </div>
       </div>
 
       <div className="flex flex-wrap justify-center gap-3">
@@ -318,7 +250,7 @@ const Step5FillBlanks: React.FC<PronunciationComponentProps> = ({
         
         <Button 
           onClick={handleListen} 
-          disabled={isListening || attemptsLeft <= 0}
+          disabled={isListening}
           className="glass-button bg-hamaspeak-teal hover:bg-hamaspeak-teal/90"
         >
           <Mic className={`mr-2 h-4 w-4 ${isListening ? 'animate-pulse' : ''}`} />
@@ -332,25 +264,35 @@ const Step5FillBlanks: React.FC<PronunciationComponentProps> = ({
           {showAnswer ? 'Ẩn đáp án' : 'Xem đáp án'}
         </Button>
         
-        {attemptsLeft <= 0 && (
-          <Button 
-            variant="outline" 
-            onClick={resetAttempts}
-          >
-            Thử lại
-          </Button>
-        )}
-        
         <Button 
           onClick={handleNext} 
-          disabled={attemptsLeft === 3 && !score}
           className="glass-button"
         >
-          {currentPhraseIndex < analysisResult.phrases.length - 1 
-            ? 'Tiếp tục' 
+          {currentPhraseIndex < (analysisResult.phrases?.length || 0) - 1 
+            ? 'Câu tiếp theo' 
             : 'Bước tiếp theo'}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
+      </div>
+      
+      <div className="mt-6 text-center">
+        <div className="flex justify-center gap-1 mb-2">
+          {analysisResult.phrases?.map((_, idx) => (
+            <div 
+              key={idx} 
+              className={`h-1.5 w-6 rounded-full ${
+                idx === currentPhraseIndex 
+                  ? 'bg-hamaspeak-purple' 
+                  : idx < currentPhraseIndex 
+                    ? 'bg-gray-400' 
+                    : 'bg-gray-200'
+              }`}
+            />
+          ))}
+        </div>
+        <p className="text-xs text-gray-500">
+          Câu {currentPhraseIndex + 1} / {analysisResult.phrases?.length || 0}
+        </p>
       </div>
     </Card>
   );

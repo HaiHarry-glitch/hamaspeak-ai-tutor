@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { StudyProvider, useStudy } from '@/contexts/StudyContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -36,8 +35,8 @@ const StudyContent = () => {
   const { isAuthenticated } = useAuth();
   const [pronunciationHistory, setPronunciationHistory] = useState<PronunciationResult[]>([]);
   
-  // Method to handle pronunciation analysis with Azure Speech Service
-  const handleAnalyzePronunciation = async (text: string): Promise<PronunciationResult> => {
+  // Explicitly type the pronunciation props
+  const handleAnalyzePronunciation: PronunciationComponentProps['onAnalyzePronunciation'] = async (text) => {
     try {
       const result = await SpeechService.assessPronunciationFromMicrophone(text);
       
