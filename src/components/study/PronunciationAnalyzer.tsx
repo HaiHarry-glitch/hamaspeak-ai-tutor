@@ -1,6 +1,7 @@
-import React, { useState, useRef, useContext } from 'react';
-import { StudyContext } from '../../contexts/StudyContext';
-import { startSpeechRecognition, stopSpeechRecognition } from '../../utils/speechUtils';
+
+import React, { useState, useRef } from 'react';
+import { useStudy } from '@/contexts/StudyContext';
+import { startSpeechRecognition, stopSpeechRecognition } from '@/utils/speechUtils';
 
 interface PronunciationScore {
   overallScore: number;
@@ -26,7 +27,7 @@ interface PronunciationScore {
 }
 
 const PronunciationAnalyzer: React.FC = () => {
-  const { currentText } = useContext(StudyContext);
+  const { currentText } = useStudy();
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [score, setScore] = useState<PronunciationScore | null>(null);
@@ -71,7 +72,7 @@ const PronunciationAnalyzer: React.FC = () => {
           console.error('Speech recognition error:', err);
         });
 
-    } catch (err) {
+    } catch (err: any) {
       setError('Failed to start recording: ' + err.message);
       console.error('Recording error:', err);
     }
@@ -105,7 +106,7 @@ const PronunciationAnalyzer: React.FC = () => {
 
       const result = await response.json();
       setScore(result);
-    } catch (err) {
+    } catch (err: any) {
       setError('Analysis failed: ' + err.message);
       console.error('Analysis error:', err);
     } finally {
@@ -214,4 +215,4 @@ const PronunciationAnalyzer: React.FC = () => {
   );
 };
 
-export default PronunciationAnalyzer; 
+export default PronunciationAnalyzer;

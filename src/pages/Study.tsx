@@ -21,6 +21,7 @@ import TopicGroupSelector from '@/components/study/TopicGroupSelector';
 import Header from '@/components/Header';
 import { Loader2 } from 'lucide-react';
 import SpeechService, { PronunciationResult } from '@/services/speechService';
+import { PronunciationComponentProps } from '@/components/study/studyComponentProps';
 
 const StudyContent = () => {
   const { 
@@ -35,7 +36,7 @@ const StudyContent = () => {
   const [pronunciationHistory, setPronunciationHistory] = useState<PronunciationResult[]>([]);
   
   // Method to handle pronunciation analysis with Azure Speech Service
-  const handleAnalyzePronunciation = async (text: string) => {
+  const handleAnalyzePronunciation = async (text: string): Promise<PronunciationResult> => {
     try {
       const result = await SpeechService.assessPronunciationFromMicrophone(text);
       

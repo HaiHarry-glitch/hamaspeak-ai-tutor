@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
@@ -8,12 +9,10 @@ import { Progress } from '@/components/ui/progress';
 import PronunciationFeedback from './PronunciationFeedback';
 import WordPronunciationPractice from './WordPronunciationPractice';
 import { useToast } from '@/hooks/use-toast';
+import { PronunciationComponentProps } from './studyComponentProps';
+import { ScoreDetails, WordFeedback } from '@/types/pronunciation';
 
-interface Step3EnglishSpeakingProps {
-  onAnalyzePronunciation?: (text: string, audioBlob?: Blob) => Promise<any>;
-}
-
-const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
+const Step3EnglishSpeaking: React.FC<PronunciationComponentProps> = ({
   onAnalyzePronunciation
 }) => {
   const { analysisResult, setCurrentStep, selectedVoice } = useStudy();
@@ -21,7 +20,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
-  const [scoreDetails, setScoreDetails] = useState<any>(null);
+  const [scoreDetails, setScoreDetails] = useState<ScoreDetails | null>(null);
   const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [showFeedback, setShowFeedback] = useState(false);
   const [wordErrors, setWordErrors] = useState<Array<{word: string; ipa: string}>>([]);
@@ -77,11 +76,12 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
       setScoreDetails({
         overallScore: scores.overallScore,
         accuracyScore: scores.accuracyScore,
-        fluencyScore: scores.fluencyScore, 
+        fluencyScore: scores.fluencyScore,
+        completenessScore: scores.completenessScore || scores.fluencyScore,
+        pronScore: scores.pronScore || scores.accuracyScore,
         intonationScore: scores.intonationScore,
         stressScore: scores.stressScore,
-        rhythmScore: Math.round((scores.fluencyScore + scores.intonationScore) / 2), // Derived score
-        wordErrorRate: 100 - scores.accuracyScore
+        rhythmScore: scores.rhythmScore
       });
       
       // Get words with pronunciation problems
@@ -181,7 +181,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
   const progress = ((currentCollocationIndex + 1) / (analysisResult.collocations?.length || 1)) * 100;
   
   // Build pronunciation feedback data
-  const feedbackData = wordErrors.map(wordError => ({
+  const feedbackData: WordFeedback[] = wordErrors.map(wordError => ({
     word: wordError.word,
     ipa: wordError.ipa,
     correct: false,
@@ -215,7 +215,7 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
         {userTranscript && (
           <div className="mt-6 border-t pt-4">
             <p className="font-medium mb-1">Câu của bạn:</p>
-            <p className={`${scoreDetails?.overallScore > 70 ? 'text-green-600' : 'text-orange-500'}`}>
+            <p className={`${scoreDetails && scoreDetails.overallScore > 70 ? 'text-green-600' : 'text-orange-500'}`}>
               {userTranscript}
             </p>
             
@@ -275,10 +275,13 @@ const Step3EnglishSpeaking: React.FC<Step3EnglishSpeakingProps> = ({
         )}
       </div>
 
-      {wordErrors.length > 0 && showFeedback && (
+      {wordErrors.length > 0 && showFeedback && scoreDetails && (
         <PronunciationFeedback 
-          feedbackData={feedbackData}
+          scoreDetails={scoreDetails}
+          feedback={feedbackData}
           onPracticeWord={handlePracticeWord}
+          transcript={userTranscript}
+          referenceText={currentCollocation}
         />
       )}
 

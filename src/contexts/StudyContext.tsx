@@ -1,110 +1,92 @@
 
-import React, { createContext, useState, useContext, ReactNode } from 'react';
-import { TextAnalysisResult, analyzeText } from '@/services/textAnalyzer';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export interface FlashcardState {
-  currentIndex: number;
-  isFlipped: boolean;
+// Define the types for the analysis result
+export interface AnalysisResult {
+  originalText: string;
+  phrases: Array<{
+    english: string;
+    vietnamese: string;
+    fillInBlanks: string;
+  }>;
+  collocations?: string[];
+  topics?: string[];
 }
 
-export type TopicGroup = 'part1' | 'part23' | 'custom';
-
+// Define the type for the context
 interface StudyContextType {
-  currentText: string;
-  setCurrentText: (text: string) => void;
-  analysisResult: TextAnalysisResult | null;
-  isAnalyzing: boolean;
   currentStep: number;
-  setCurrentStep: (step: number) => void;
+  isAnalyzing: boolean;
   selectedVoice: string;
-  setSelectedVoice: (voice: string) => void;
-  flashcardState: FlashcardState;
-  setFlashcardState: React.Dispatch<React.SetStateAction<FlashcardState>>;
-  analyzeUserText: (text: string) => Promise<void>;
-  selectedTopicGroup: TopicGroup;
-  setSelectedTopicGroup: (group: TopicGroup) => void;
+  selectedTopicGroup: string;
   isAuthModalOpen: boolean;
+  analysisResult: AnalysisResult | null;
+  currentText: string; // Added this property to fix PronunciationAnalyzer
+  setCurrentStep: (step: number) => void;
+  setIsAnalyzing: (isAnalyzing: boolean) => void;
+  setSelectedVoice: (voice: string) => void;
+  setSelectedTopicGroup: (group: string) => void;
   setIsAuthModalOpen: (isOpen: boolean) => void;
+  setAnalysisResult: (result: AnalysisResult | null) => void;
+  setCurrentText: (text: string) => void; // Added this function to fix PronunciationAnalyzer
 }
 
-const StudyContext = createContext<StudyContextType | undefined>(undefined);
+// Create the context with a default value
+export const StudyContext = createContext<StudyContextType>({
+  currentStep: 0,
+  isAnalyzing: false,
+  selectedVoice: 'en-US-JennyNeural',
+  selectedTopicGroup: 'part1',
+  isAuthModalOpen: false,
+  analysisResult: null,
+  currentText: '',
+  setCurrentStep: () => {},
+  setIsAnalyzing: () => {},
+  setSelectedVoice: () => {},
+  setSelectedTopicGroup: () => {},
+  setIsAuthModalOpen: () => {},
+  setAnalysisResult: () => {},
+  setCurrentText: () => {}
+});
 
-interface StudyProviderProps {
-  children: ReactNode;
-}
-
-export const StudyProvider = ({ children }: StudyProviderProps) => {
-  const [currentText, setCurrentText] = useState('');
-  const [analysisResult, setAnalysisResult] = useState<TextAnalysisResult | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+// Create the provider component
+export const StudyProvider = ({ children }: { children: ReactNode }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [selectedVoice, setSelectedVoice] = useState('');
-  const [selectedTopicGroup, setSelectedTopicGroup] = useState<TopicGroup>('part1');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState('en-US-JennyNeural');
+  const [selectedTopicGroup, setSelectedTopicGroup] = useState('part1');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [flashcardState, setFlashcardState] = useState<FlashcardState>({
-    currentIndex: 0,
-    isFlipped: false
-  });
-  
-  const { isAuthenticated, useSessionTry, sessionTriesRemaining } = useAuth();
-
-  const analyzeUserText = async (text: string) => {
-    try {
-      // Check if user has session tries remaining or is authenticated
-      if (!isAuthenticated && sessionTriesRemaining <= 0) {
-        setIsAuthModalOpen(true);
-        return;
-      }
-      
-      if (!isAuthenticated) {
-        useSessionTry();
-      }
-      
-      setIsAnalyzing(true);
-      const result = await analyzeText(text);
-      setAnalysisResult(result);
-      
-      if (result.collocations && result.collocations.length > 0) {
-        setCurrentStep(0.5);
-      } else {
-        setCurrentStep(1);
-      }
-    } catch (error) {
-      console.error('Failed to analyze text:', error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const value = {
-    currentText,
-    setCurrentText,
-    analysisResult,
-    isAnalyzing,
-    currentStep,
-    setCurrentStep,
-    selectedVoice,
-    setSelectedVoice,
-    flashcardState,
-    setFlashcardState,
-    analyzeUserText,
-    selectedTopicGroup,
-    setSelectedTopicGroup,
-    isAuthModalOpen,
-    setIsAuthModalOpen,
-  };
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [currentText, setCurrentText] = useState<string>('');
 
   return (
-    <StudyContext.Provider value={value}>
+    <StudyContext.Provider
+      value={{
+        currentStep,
+        isAnalyzing,
+        selectedVoice,
+        selectedTopicGroup,
+        isAuthModalOpen,
+        analysisResult,
+        currentText,
+        setCurrentStep,
+        setIsAnalyzing,
+        setSelectedVoice,
+        setSelectedTopicGroup,
+        setIsAuthModalOpen,
+        setAnalysisResult,
+        setCurrentText
+      }}
+    >
       {children}
     </StudyContext.Provider>
   );
 };
 
+// Create a custom hook to use the context
 export const useStudy = () => {
   const context = useContext(StudyContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useStudy must be used within a StudyProvider');
   }
   return context;

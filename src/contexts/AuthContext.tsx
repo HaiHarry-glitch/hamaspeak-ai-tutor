@@ -78,7 +78,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({
         title: 'Đăng ký thành công!',
         description: 'Chào mừng bạn đến với Hamaspeak.',
-        variant: 'success'
       });
     } catch (error) {
       console.error('Error during sign up:', error);
@@ -117,7 +116,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({
         title: 'Đăng nhập thành công!',
         description: `Chào mừng trở lại, ${mockUser.displayName}!`,
-        variant: 'success'
       });
     } catch (error) {
       console.error('Error during sign in:', error);
@@ -201,7 +199,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({
         title: 'Cập nhật hồ sơ thành công',
         description: 'Thông tin của bạn đã được cập nhật.',
-        variant: 'success'
       });
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -222,7 +219,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({
         title: 'Đặt lại mật khẩu',
         description: `Chúng tôi đã gửi email đặt lại mật khẩu đến ${email}`,
-        variant: 'success'
       });
     } catch (error) {
       console.error('Error resetting password:', error);
