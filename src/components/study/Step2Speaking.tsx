@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
@@ -86,6 +87,8 @@ const Step2Speaking = () => {
   }
 
   const progress = ((currentPhraseIndex + 1) / analysisResult.phrases.length) * 100;
+  // Fix: Use scoreDetails?.overallScore instead of score
+  const overallScore = scoreDetails?.overallScore || null;
 
   return (
     <Card className="glass-card p-6 max-w-3xl mx-auto animate-fade-in">
@@ -122,27 +125,27 @@ const Step2Speaking = () => {
         {userTranscript && (
           <div className="mt-6 border-t pt-4">
             <p className="font-medium mb-1">Câu của bạn:</p>
-            <p className={`${score && score > 70 ? 'text-green-600' : 'text-orange-500'}`}>
+            <p className={`${overallScore && overallScore > 70 ? 'text-green-600' : 'text-orange-500'}`}>
               {userTranscript}
             </p>
             
-            {score !== null && (
+            {overallScore !== null && (
               <div className="mt-3">
                 <div className="flex justify-between text-sm mb-1">
                   <span>Độ chính xác</span>
-                  <span>{score}%</span>
+                  <span>{overallScore}%</span>
                 </div>
                 <Progress 
-                  value={score} 
+                  value={overallScore} 
                   className={`h-2 ${
-                    score > 80 ? 'bg-green-100' : 
-                    score > 60 ? 'bg-yellow-100' : 
+                    overallScore > 80 ? 'bg-green-100' : 
+                    overallScore > 60 ? 'bg-yellow-100' : 
                     'bg-orange-100'}`} 
                 />
                 
                 <p className="mt-2 text-sm">
-                  {score > 80 ? 'Tuyệt vời! Phát âm của bạn rất chuẩn.' :
-                   score > 60 ? 'Khá tốt! Tiếp tục luyện tập.' :
+                  {overallScore > 80 ? 'Tuyệt vời! Phát âm của bạn rất chuẩn.' :
+                   overallScore > 60 ? 'Khá tốt! Tiếp tục luyện tập.' :
                    'Hãy thử lại và cải thiện phát âm của bạn.'}
                 </p>
               </div>
@@ -202,7 +205,7 @@ const Step2Speaking = () => {
         
         <Button 
           onClick={handleNext} 
-          disabled={attemptsLeft === 3 && !score}
+          disabled={attemptsLeft === 3 && !overallScore}
           className="glass-button"
         >
           {currentPhraseIndex < analysisResult.phrases.length - 1 

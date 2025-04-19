@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
@@ -57,13 +58,21 @@ const Step2Flashcards = () => {
   }, [currentIndex, currentCollocation]);
 
   const toggleFlip = () => {
-    setFlashcardState(prev => ({ ...prev, isFlipped: !prev.isFlipped }));
+    // Fix: Explicitly provide the correct type for flashcard state
+    setFlashcardState({
+      currentIndex: currentIndex,
+      isFlipped: !isFlipped
+    });
     setShowHint(false);
   };
 
   const handleNext = () => {
     if (currentIndex < (collocations.length || 0) - 1) {
-      setFlashcardState({ currentIndex: currentIndex + 1, isFlipped: false });
+      // Fix: Explicitly provide the correct type for flashcard state
+      setFlashcardState({
+        currentIndex: currentIndex + 1,
+        isFlipped: false
+      });
       setShowHint(false);
     } else {
       // Move to next step when all flashcards are complete
@@ -73,7 +82,11 @@ const Step2Flashcards = () => {
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
-      setFlashcardState({ currentIndex: currentIndex - 1, isFlipped: false });
+      // Fix: Explicitly provide the correct type for flashcard state
+      setFlashcardState({
+        currentIndex: currentIndex - 1,
+        isFlipped: false
+      });
       setShowHint(false);
     }
   };

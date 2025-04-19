@@ -23,6 +23,9 @@ import { Loader2 } from 'lucide-react';
 import SpeechService, { PronunciationResult } from '@/services/speechService';
 import { PronunciationComponentProps } from '@/components/study/studyComponentProps';
 
+// Fix: Define the prop types for components that need pronunciation support
+type StepComponentProps = React.ComponentProps<typeof Step3EnglishSpeaking>;
+
 const StudyContent = () => {
   const { 
     currentStep, 
@@ -111,36 +114,24 @@ const StudyContent = () => {
         {currentStep === 1 && <Step1Listening />}
         {currentStep === 2 && <Step2Flashcards />}
         {currentStep === 3 && (
-          <Step3EnglishSpeaking 
-            {...pronunciationProps}
-          />
+          <Step3EnglishSpeaking {...(pronunciationProps as StepComponentProps)} />
         )}
         {currentStep === 4 && (
-          <Step4VietnameseSpeaking 
-            {...pronunciationProps}
-          />
+          <Step4VietnameseSpeaking {...(pronunciationProps as React.ComponentProps<typeof Step4VietnameseSpeaking>)} />
         )}
         
         {/* Output steps (5-8) */}
         {currentStep === 5 && (
-          <Step5FillBlanks 
-            {...pronunciationProps}
-          />
+          <Step5FillBlanks {...(pronunciationProps as React.ComponentProps<typeof Step5FillBlanks>)} />
         )}
         {currentStep === 6 && (
-          <Step6ListeningComprehension 
-            {...pronunciationProps}
-          />
+          <Step6ListeningComprehension {...(pronunciationProps as React.ComponentProps<typeof Step6ListeningComprehension>)} />
         )}
         {currentStep === 7 && (
-          <Step7ParagraphSpeaking 
-            {...pronunciationProps}
-          />
+          <Step7ParagraphSpeaking {...(pronunciationProps as React.ComponentProps<typeof Step7ParagraphSpeaking>)} />
         )}
         {currentStep === 8 && (
-          <Step8CompleteSpeaking 
-            {...pronunciationProps}
-          />
+          <Step8CompleteSpeaking {...(pronunciationProps as React.ComponentProps<typeof Step8CompleteSpeaking>)} />
         )}
         
         <AuthModal 

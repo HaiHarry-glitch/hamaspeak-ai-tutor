@@ -36,16 +36,17 @@ interface StudyContextType {
   isAuthModalOpen: boolean;
   analysisResult: AnalysisResult | null;
   currentText: string;
-  flashcardState: FlashcardState; // Added this property
+  flashcardState: FlashcardState;
   setCurrentStep: (step: number) => void;
   setIsAnalyzing: (isAnalyzing: boolean) => void;
   setSelectedVoice: (voice: string) => void;
-  setSelectedTopicGroup: (group: string) => void;
+  // Fix: Update the type to accept TopicGroup enum
+  setSelectedTopicGroup: (group: TopicGroup | string) => void;
   setIsAuthModalOpen: (isOpen: boolean) => void;
   setAnalysisResult: (result: AnalysisResult | null) => void;
   setCurrentText: (text: string) => void;
-  setFlashcardState: (state: FlashcardState) => void; // Added this function
-  analyzeUserText: (text: string) => Promise<void>; // Added this function
+  setFlashcardState: (state: FlashcardState) => void;
+  analyzeUserText: (text: string) => Promise<void>;
 }
 
 // Create the context with a default value
@@ -74,7 +75,7 @@ export const StudyProvider = ({ children }: { children: ReactNode }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState('en-US-JennyNeural');
-  const [selectedTopicGroup, setSelectedTopicGroup] = useState(TopicGroup.PART1);
+  const [selectedTopicGroup, setSelectedTopicGroup] = useState<TopicGroup>(TopicGroup.PART1);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [currentText, setCurrentText] = useState<string>('');
@@ -82,6 +83,19 @@ export const StudyProvider = ({ children }: { children: ReactNode }) => {
     currentIndex: 0, 
     isFlipped: false 
   });
+
+  // Fix: Create a wrapper function to handle type conversion
+  const handleTopicGroupChange = (group: TopicGroup | string) => {
+    // Convert string to enum if needed
+    if (typeof group === 'string') {
+      // Cast to TopicGroup if it's one of the enum values
+      if (Object.values(TopicGroup).includes(group as TopicGroup)) {
+        setSelectedTopicGroup(group as TopicGroup);
+      }
+    } else {
+      setSelectedTopicGroup(group);
+    }
+  };
 
   // Add analyzeUserText function
   const analyzeUserText = async (text: string) => {
@@ -100,7 +114,8 @@ export const StudyProvider = ({ children }: { children: ReactNode }) => {
         collocations: text.split(' ')
           .filter((_, i) => i % 3 === 0)
           .map((word, i) => `${word} ${text.split(' ')[i*3+1] || 'important'}`),
-        topics: ['education', 'technology', 'environment']
+        topics: ['education', 'technology', 'environment'],
+        sentences: text.split(/[.!?]/g).filter(s => s.trim() !== '') // Add sentences
       };
       
       // Wait a bit to simulate processing
@@ -130,7 +145,7 @@ export const StudyProvider = ({ children }: { children: ReactNode }) => {
         setCurrentStep,
         setIsAnalyzing,
         setSelectedVoice,
-        setSelectedTopicGroup,
+        setSelectedTopicGroup: handleTopicGroupChange,
         setIsAuthModalOpen,
         setAnalysisResult,
         setCurrentText,
