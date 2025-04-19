@@ -63,32 +63,6 @@ serve(async (req) => {
       })
     }
 
-    if (type === 'pronunciation') {
-      // Simulate more realistic pronunciation scoring
-      const words = text.split(/\s+/);
-      const pronunciationResult = {
-        text,
-        overallScore: {
-          accuracyScore: Math.round(Math.random() * 30 + 65),
-          fluencyScore: Math.round(Math.random() * 30 + 65),
-          completenessScore: Math.round(Math.random() * 30 + 65),
-          pronScore: Math.round(Math.random() * 30 + 65)
-        },
-        words: words.map(word => ({
-          word,
-          accuracyScore: Math.round(Math.random() * 30 + 65),
-          errorType: Math.random() > 0.7 ? 'pronunciation' : null,
-          offset: 0,
-          duration: 0
-        })),
-        json: '{}'
-      }
-      
-      return new Response(JSON.stringify(pronunciationResult), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
     throw new Error('Invalid analysis type')
 
   } catch (error) {
