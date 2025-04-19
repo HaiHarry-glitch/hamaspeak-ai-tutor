@@ -1,88 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pronunciation Test App</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 30px;
-        }
-        
-        .link-list {
-            margin-bottom: 30px;
-        }
-        
-        .link-item {
-            margin-bottom: 15px;
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .link-item h3 {
-            margin-top: 0;
-            color: #3498db;
-        }
-        
-        .link-item p {
-            margin-bottom: 10px;
-        }
-        
-        .link-item a {
-            display: inline-block;
-            background-color: #3498db;
-            color: white;
-            padding: 8px 15px;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        
-        .link-item a:hover {
-            background-color: #2980b9;
-        }
-    </style>
-</head>
-<body>
-    <h1>Pronunciation Testing App</h1>
-    
-    <div class="link-list">
-        <div class="link-item">
-            <h3>Simple Test</h3>
-            <p>A simple tool to test API connectivity without audio recording.</p>
-            <a href="/test.html">Open Simple Test</a>
-        </div>
-        
-        <div class="link-item">
-            <h3>Basic Pronunciation Test</h3>
-            <p>Test the pronunciation scoring API with text only.</p>
-            <a href="/simple-pronunciation.html">Open Basic Test</a>
-        </div>
-        
-        <div class="link-item">
-            <h3>Full Pronunciation Test</h3>
-            <p>Complete pronunciation testing tool with audio recording and detailed scoring.</p>
-            <a href="/pronunciation-test.html">Open Full Test</a>
-        </div>
-        
-        <div class="link-item">
-            <h3>Direct Routes</h3>
-            <p>Alternative access URLs:</p>
-            <ul>
-                <li><a href="/simple">Simple Route (/simple)</a></li>
-                <li><a href="/pronunciation">Pronunciation Route (/pronunciation)</a></li>
-                <li><a href="/test-route">API Test Route (/test-route)</a></li>
-            </ul>
-        </div>
-    </div>
-</body>
-</html>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vietnamese Pronunciation AI Tutor</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html> 
