@@ -1,3 +1,4 @@
+
 // Define types to match Microsoft Speech SDK
 interface PronunciationAssessmentConfig {
   referenceText: string;
@@ -103,10 +104,45 @@ export interface PhonemeScore {
 }
 
 export class SpeechService {
-  private speechConfig: SpeechConfig;
-  private pronunciationConfig: PronunciationAssessmentConfig;
+  private speechConfig: SpeechConfig | null = null;
+  private pronunciationConfig: PronunciationAssessmentConfig | null = null;
+  private isInitialized = false;
+  private initializationPromise: Promise<boolean> | null = null;
 
   constructor() {
+    // We'll initialize the SDK lazily to ensure it's loaded
+    this.initializationPromise = this.initialize();
+  }
+
+  private async initialize(): Promise<boolean> {
+    try {
+      // Check if SpeechSDK is already loaded
+      if (typeof SpeechSDK !== 'undefined') {
+        this.initializeSpeechSDK();
+        return true;
+      }
+
+      // Wait for the SDK to load (it should be added in index.html)
+      return new Promise<boolean>((resolve) => {
+        const checkSDKLoaded = () => {
+          if (typeof SpeechSDK !== 'undefined') {
+            this.initializeSpeechSDK();
+            resolve(true);
+            return;
+          }
+          // Check again in 100ms
+          setTimeout(checkSDKLoaded, 100);
+        };
+        
+        checkSDKLoaded();
+      });
+    } catch (error) {
+      console.error("Error initializing Speech SDK:", error);
+      return false;
+    }
+  }
+
+  private initializeSpeechSDK() {
     try {
       // Azure Speech service configuration
       this.speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
@@ -121,15 +157,38 @@ export class SpeechService {
         SpeechSDK.PronunciationAssessmentGradingSystem.HundredMark,
         SpeechSDK.PronunciationAssessmentGranularity.Phoneme
       );
+      
+      this.isInitialized = true;
+      console.log("Microsoft Speech SDK initialized successfully");
     } catch (error) {
       console.error("Error initializing Speech SDK:", error);
       throw new Error("Failed to initialize Microsoft Speech SDK. Please refresh the page and try again.");
     }
   }
 
+  private async ensureInitialized(): Promise<void> {
+    if (!this.isInitialized) {
+      if (!this.initializationPromise) {
+        this.initializationPromise = this.initialize();
+      }
+      
+      const initialized = await this.initializationPromise;
+      if (!initialized) {
+        throw new Error("Speech SDK could not be initialized. Please refresh the page and try again.");
+      }
+    }
+  }
+
   async assessPronunciationFromMicrophone(referenceText: string): Promise<PronunciationResult> {
+    await this.ensureInitialized();
+    
     return new Promise((resolve, reject) => {
       try {
+        if (!this.pronunciationConfig || !this.speechConfig) {
+          reject(new Error("Speech services not initialized. Please refresh the page."));
+          return;
+        }
+        
         // Update the reference text
         this.pronunciationConfig.referenceText = referenceText;
         
@@ -233,8 +292,15 @@ export class SpeechService {
   }
 
   async assessPronunciationFromFile(audioFile: File, referenceText: string): Promise<PronunciationResult> {
+    await this.ensureInitialized();
+    
     return new Promise((resolve, reject) => {
       try {
+        if (!this.pronunciationConfig || !this.speechConfig) {
+          reject(new Error("Speech services not initialized. Please refresh the page."));
+          return;
+        }
+        
         // Set the reference text
         this.pronunciationConfig.referenceText = referenceText;
         

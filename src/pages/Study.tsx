@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { StudyProvider, useStudy } from '@/contexts/StudyContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -22,6 +23,24 @@ import Header from '@/components/Header';
 import { Loader2 } from 'lucide-react';
 import SpeechService, { PronunciationResult } from '@/services/speechService';
 import { PronunciationComponentProps } from '@/components/study/studyComponentProps';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+
+// Add script loading function
+const loadScript = (src: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve();
+    script.onerror = (e) => reject(new Error(`Failed to load script: ${src}`));
+    document.head.appendChild(script);
+  });
+};
 
 const StudyContent = () => {
   const { 
@@ -34,6 +53,25 @@ const StudyContent = () => {
   } = useStudy();
   const { isAuthenticated } = useAuth();
   const [pronunciationHistory, setPronunciationHistory] = useState<PronunciationResult[]>([]);
+  const [sdkLoaded, setSdkLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  
+  // Load the Microsoft Speech SDK
+  useEffect(() => {
+    const loadSpeechSdk = async () => {
+      try {
+        await loadScript("https://aka.ms/csspeech/jsbrowserpackageraw");
+        setSdkLoaded(true);
+        console.log('Microsoft Speech SDK loaded successfully');
+      } catch (error) {
+        console.error('Failed to load Microsoft Speech SDK:', error);
+        setLoadError('Failed to load Microsoft Speech SDK. Pronunciation analysis may not work correctly.');
+        toast.error('Failed to load pronunciation service. Some features may be limited.');
+      }
+    };
+    
+    loadSpeechSdk();
+  }, []);
   
   // Explicitly type the pronunciation props
   const handleAnalyzePronunciation: PronunciationComponentProps['onAnalyzePronunciation'] = async (text) => {
@@ -46,6 +84,8 @@ const StudyContent = () => {
       return result;
     } catch (error) {
       console.error('Speech service error:', error);
+      toast.error('Lỗi dịch vụ phân tích phát âm. Đang sử dụng dữ liệu mẫu.');
+      
       // Return a simplified mock result when there's an error
       return {
         text: text,
@@ -65,6 +105,12 @@ const StudyContent = () => {
   const pronunciationProps: PronunciationComponentProps = {
     onAnalyzePronunciation: handleAnalyzePronunciation
   };
+
+  // Show an error message if script loading failed
+  if (loadError) {
+    console.warn(loadError);
+    // We'll continue without the SDK, fallback will be used
+  }
 
   return (
     <div className="min-h-screen pb-10">
