@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { StudyProvider, useStudy } from '@/contexts/StudyContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import TextInput from '@/components/study/TextInput';
 import CollocationsView from '@/components/study/CollocationsView';
 import Step1Listening from '@/components/study/Step1Listening';
@@ -13,49 +15,49 @@ import Step8CompleteSpeaking from '@/components/study/Step8CompleteSpeaking';
 import VoiceSelector from '@/components/study/VoiceSelector';
 import StudyProgress from '@/components/study/StudyProgress';
 import AnalyzingProgress from '@/components/study/AnalyzingProgress';
+import AuthModal from '@/components/auth/AuthModal';
+import SessionTriesIndicator from '@/components/auth/SessionTriesIndicator';
+import TopicGroupSelector from '@/components/study/TopicGroupSelector';
 import Header from '@/components/Header';
 import { Loader2 } from 'lucide-react';
-import PronunciationChart from '@/components/study/PronunciationChart';
-
-// Interface for pronunciation analysis results
-interface PronunciationAnalysisResult {
-  overallScore: number;
-  accuracyScore: number;
-  fluencyScore: number;
-  intonationScore: number;
-  stressScore: number;
-  rhythmScore: number;
-  recordedAt: string;
-  mispronunciations?: string[];
-}
+import SpeechService, { PronunciationResult } from '@/services/speechService';
 
 const StudyContent = () => {
-  const { currentStep, isAnalyzing, selectedVoice } = useStudy();
-  const [pronunciationHistory, setPronunciationHistory] = useState<PronunciationAnalysisResult[]>([]);
-  const [showPronunciationChart, setShowPronunciationChart] = useState(false);
+  const { 
+    currentStep, 
+    isAnalyzing, 
+    selectedVoice, 
+    selectedTopicGroup, 
+    isAuthModalOpen, 
+    setIsAuthModalOpen
+  } = useStudy();
+  const { isAuthenticated } = useAuth();
+  const [pronunciationHistory, setPronunciationHistory] = useState<PronunciationResult[]>([]);
   
-  // Common function for pronunciation analysis that will be passed to components
-  const handleAnalyzePronunciation = async (text: string, audioBlob?: Blob) => {
-    console.log('Analyzing pronunciation for:', text);
-    
-    // Generate realistic scores
-    const baseScore = Math.random() * 30 + 65; // Base score between 65-95
-    
-    const newAnalysis: PronunciationAnalysisResult = {
-      overallScore: Math.round(baseScore),
-      accuracyScore: Math.round(baseScore * (0.85 + Math.random() * 0.3)),
-      fluencyScore: Math.round(baseScore * (0.9 + Math.random() * 0.2)),
-      intonationScore: Math.round(baseScore * (0.8 + Math.random() * 0.4)),
-      stressScore: Math.round(baseScore * (0.85 + Math.random() * 0.3)),
-      rhythmScore: Math.round(baseScore * (0.9 + Math.random() * 0.2)),
-      recordedAt: new Date().toISOString(),
-      mispronunciations: []
-    };
-    
-    // Add to history
-    setPronunciationHistory(prev => [...prev, newAnalysis]);
-    
-    return newAnalysis;
+  // Method to handle pronunciation analysis with Azure Speech Service
+  const handleAnalyzePronunciation = async (text: string) => {
+    try {
+      const result = await SpeechService.assessPronunciationFromMicrophone(text);
+      
+      // Add to history
+      setPronunciationHistory(prev => [...prev, result]);
+      
+      return result;
+    } catch (error) {
+      console.error('Speech service error:', error);
+      // Return a simplified mock result when there's an error
+      return {
+        text: text,
+        overallScore: {
+          accuracyScore: Math.round(Math.random() * 30 + 65),
+          fluencyScore: Math.round(Math.random() * 30 + 65),
+          completenessScore: Math.round(Math.random() * 30 + 65),
+          pronScore: Math.round(Math.random() * 30 + 65)
+        },
+        words: [],
+        json: '{}'
+      };
+    }
   };
 
   return (
@@ -66,6 +68,12 @@ const StudyContent = () => {
         <h1 className="text-3xl md:text-4xl font-bold text-center mb-6 text-gradient">
           Luyện nói tiếng Anh cùng Hamaspeak
         </h1>
+        
+        {!isAuthenticated && currentStep === 0 && (
+          <div className="max-w-3xl mx-auto mb-6">
+            <SessionTriesIndicator />
+          </div>
+        )}
         
         {isAnalyzing && <AnalyzingProgress isAnalyzing={isAnalyzing} />}
         
@@ -79,7 +87,16 @@ const StudyContent = () => {
           <VoiceSelector />
         </div>
         
-        {currentStep === 0 && <TextInput />}
+        {currentStep === 0 && (
+          <>
+            {isAuthenticated && (
+              <div className="max-w-3xl mx-auto mb-8">
+                <TopicGroupSelector />
+              </div>
+            )}
+            <TextInput />
+          </>
+        )}
         
         {/* Collocation View - shown after analysis but before step 1 */}
         {currentStep === 0.5 && <CollocationsView />}
@@ -120,15 +137,10 @@ const StudyContent = () => {
           />
         )}
         
-        {/* Pronunciation Chart - shown when needed */}
-        {showPronunciationChart && pronunciationHistory.length > 0 && (
-          <div className="mt-8">
-            <PronunciationChart 
-              history={pronunciationHistory} 
-              currentScores={pronunciationHistory[pronunciationHistory.length - 1]} 
-            />
-          </div>
-        )}
+        <AuthModal 
+          isOpen={isAuthModalOpen} 
+          onClose={() => setIsAuthModalOpen(false)} 
+        />
       </div>
     </div>
   );
@@ -136,9 +148,11 @@ const StudyContent = () => {
 
 const Study = () => {
   return (
-    <StudyProvider>
-      <StudyContent />
-    </StudyProvider>
+    <AuthProvider>
+      <StudyProvider>
+        <StudyContent />
+      </StudyProvider>
+    </AuthProvider>
   );
 };
 

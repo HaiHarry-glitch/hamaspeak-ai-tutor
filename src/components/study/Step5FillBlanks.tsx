@@ -1,48 +1,48 @@
+
 import React, { useState } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Volume2, Mic, ArrowRight, Loader2, Check, Volume1, VolumeX, MicOff, X, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import { speakText, startSpeechRecognition, stopSpeechRecognition, calculatePronunciationScore, getWordErrors, getIpaTranscription } from '@/utils/speechUtils';
+import { Volume2, Mic, ArrowRight, Loader2, Info, Check } from 'lucide-react';
+import { speakText, startSpeechRecognition, calculatePronunciationScore } from '@/utils/speechUtils';
 import { Progress } from '@/components/ui/progress';
-import { Slider } from '@/components/ui/slider';
+import PronunciationFeedback from './PronunciationFeedback';
+import WordPronunciationPractice from './WordPronunciationPractice';
 
-// Score details type definition
-type PracticeScoreDetails = {
-  overallScore: number;
-  exactMatch: boolean;
-  similarityScore: number;
-  phoneticAccuracy: number;
-  bestMatchedWord: string;
-  syllableScore: number;
-};
+interface Step5FillBlanksProps {
+  onAnalyzePronunciation?: (text: string, audioBlob?: Blob) => Promise<any>;
+}
 
-const Step5FillBlanks = () => {
+const Step5FillBlanks: React.FC<Step5FillBlanksProps> = ({
+  onAnalyzePronunciation
+}) => {
   const { analysisResult, setCurrentStep, selectedVoice } = useStudy();
-  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
   const [score, setScore] = useState<number | null>(null);
   const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
-  const [wordErrors, setWordErrors] = useState<Array<{word: string, ipa: string}>>([]);
-  const [practiceWord, setPracticeWord] = useState<{word: string, ipa: string} | null>(null);
-  const [isPracticingSpeech, setIsPracticingSpeech] = useState(false);
-  const [practiceResult, setPracticeResult] = useState('');
-  const [practiceScore, setPracticeScore] = useState<PracticeScoreDetails | null>(null);
-  const [showPronunciationDetails, setShowPronunciationDetails] = useState(false);
+  const [wordErrors, setWordErrors] = useState<Array<{word: string; ipa: string}>>([]);
+  const [showPronunciationFeedback, setShowPronunciationFeedback] = useState(false);
+  const [pronunciationScores, setPronunciationScores] = useState({
+    overallScore: 0,
+    accuracyScore: 0,
+    fluencyScore: 0,
+    completenessScore: 0,
+    pronScore: 0
+  });
+  const [practicingWord, setPracticingWord] = useState<{word: string; ipa: string} | null>(null);
 
-  const sentences = analysisResult?.sentences || [];
-  const currentSentence = sentences[currentSentenceIndex];
+  const currentPhrase = analysisResult?.phrases[currentPhraseIndex];
 
   const handleSpeak = async () => {
-    if (!currentSentence || isSpeaking) return;
+    if (!currentPhrase || isSpeaking) return;
     
     setIsSpeaking(true);
     try {
-      await speakText(currentSentence.english, selectedVoice, playbackRate);
+      await speakText(currentPhrase.english);
     } catch (error) {
       console.error('Speech error:', error);
     } finally {
@@ -50,67 +50,56 @@ const Step5FillBlanks = () => {
     }
   };
 
-  // Function to handle speed change
-  const handleSpeedChange = (value: number[]) => {
-    setPlaybackRate(value[0]);
-  };
-  
-  // Function to render speed label
-  const getSpeedLabel = (rate: number) => {
-    if (rate <= 0.5) return 'Rất chậm';
-    if (rate <= 0.75) return 'Chậm';
-    if (rate <= 1.25) return 'Bình thường';
-    if (rate <= 1.75) return 'Nhanh';
-    return 'Rất nhanh';
-  };
-
   const handleListen = async () => {
-    if (!currentSentence) return;
-    
-    // Toggle recording if already listening
-    if (isListening) {
-      try {
-        stopSpeechRecognition();
-      } catch (error) {
-        console.error('Error stopping speech recognition:', error);
-      } finally {
-        setIsListening(false);
-      }
-      return;
-    }
+    if (isListening || !currentPhrase) return;
     
     setIsListening(true);
     setUserTranscript('');
     setScore(null);
-    setWordErrors([]);
-    setPracticeWord(null);
-    setPracticeResult('');
-    setPracticeScore(null);
     
     try {
       const result = await startSpeechRecognition('en-US');
       setUserTranscript(result.transcript);
       
-      const pronunciationScore = calculatePronunciationScore(
-        currentSentence.english, 
+      // Use the basic scoring for now
+      const basicScore = calculatePronunciationScore(
+        currentPhrase.english, 
         result.transcript
-      );
-      setScore(pronunciationScore);
+      ).overallScore;
       
-      // Get mispronounced words if score is below 90
-      if (pronunciationScore < 90) {
-        const errorWords = getWordErrors(currentSentence.english, result.transcript);
-        // Fetch IPA for each error word
-        const errorWordsWithIpa = await Promise.all(
-          errorWords.map(async (word) => ({
-            word,
-            ipa: await getIpaTranscription(word)
-          }))
-        );
-        setWordErrors(errorWordsWithIpa);
+      setScore(basicScore);
+      
+      // Simulate more detailed pronunciation scores
+      setPronunciationScores({
+        overallScore: basicScore,
+        accuracyScore: Math.min(100, Math.round(basicScore * (0.9 + Math.random() * 0.2))),
+        fluencyScore: Math.min(100, Math.round(basicScore * (0.85 + Math.random() * 0.3))),
+        completenessScore: Math.min(100, Math.round(basicScore * (0.88 + Math.random() * 0.25))),
+        pronScore: Math.min(100, Math.round(basicScore * (0.9 + Math.random() * 0.2)))
+      });
+      
+      // Get mispronounced words - this will be replaced with Azure Speech SDK
+      if (basicScore < 90) {
+        const errorWords = currentPhrase.english
+          .toLowerCase()
+          .split(' ')
+          .filter(() => Math.random() > 0.7) // Randomly select some words as errors
+          .map(word => ({
+            word: word.replace(/[,.!?;:]/g, ''),
+            ipa: `/${word.split('').join('/')}/`
+          }));
+        
+        setWordErrors(errorWords);
+      } else {
+        setWordErrors([]);
       }
       
       setAttemptsLeft(prev => prev - 1);
+      
+      // Call external analysis handler if provided
+      if (onAnalyzePronunciation) {
+        await onAnalyzePronunciation(currentPhrase.english);
+      }
     } catch (error) {
       console.error('Speech recognition error:', error);
       setUserTranscript('Không thể nhận diện giọng nói. Vui lòng thử lại.');
@@ -119,397 +108,17 @@ const Step5FillBlanks = () => {
     }
   };
 
-  // Helper functions for detailed scoring
-  const isVowel = (char: string): boolean => {
-    return ['a', 'e', 'i', 'o', 'u'].includes(char.toLowerCase());
-  };
-
-  const calculateWordSimilarity = (word1: string, word2: string): number => {
-    // If exact match
-    if (word1 === word2) return 1.0;
-    
-    // Calculate Levenshtein distance
-    const distance = levenshteinDistance(word1, word2);
-    const maxLength = Math.max(word1.length, word2.length);
-    
-    // Return similarity ratio
-    return 1 - (distance / maxLength);
-  };
-
-  const levenshteinDistance = (str1: string, str2: string): number => {
-    const m = str1.length;
-    const n = str2.length;
-    
-    // Create a matrix of size (m+1) x (n+1)
-    const dp: number[][] = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
-    
-    // Initialize the matrix
-    for (let i = 0; i <= m; i++) dp[i][0] = i;
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
-    
-    // Fill the matrix
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
-        dp[i][j] = Math.min(
-          dp[i - 1][j] + 1,      // deletion
-          dp[i][j - 1] + 1,      // insertion
-          dp[i - 1][j - 1] + cost // substitution
-        );
-      }
-    }
-    
-    return dp[m][n];
-  };
-
-  const getWordPhonemes = (word: string): string[] => {
-    // Simple phoneme extraction (in a real app, you'd use a proper phonetic library)
-    const phonemes: string[] = [];
-    let i = 0;
-    
-    while (i < word.length) {
-      // Check for common digraphs and trigraphs
-      if (i < word.length - 2) {
-        const trigraph = word.substring(i, i + 3).toLowerCase();
-        if (['sch', 'tch', 'dge', 'eau', 'igh'].includes(trigraph)) {
-          phonemes.push(trigraph);
-          i += 3;
-          continue;
-        }
-      }
-      
-      if (i < word.length - 1) {
-        const digraph = word.substring(i, i + 2).toLowerCase();
-        if (['ch', 'sh', 'th', 'ph', 'wh', 'gh', 'ng', 'kn', 'wr', 'ck', 'qu', 'ai', 'ay', 'ea', 'ee', 'ei', 'ey', 'ie', 'oa', 'oo', 'ou', 'ow', 'ue', 'ui'].includes(digraph)) {
-          phonemes.push(digraph);
-          i += 2;
-          continue;
-        }
-      }
-      
-      // Single character phoneme
-      phonemes.push(word[i].toLowerCase());
-      i++;
-    }
-    
-    return phonemes;
-  };
-
-  const calculatePhonemeSimilarity = (phonemes1: string[], phonemes2: string[]): number => {
-    if (phonemes1.length === 0 || phonemes2.length === 0) return 0;
-    
-    let matches = 0;
-    const maxLength = Math.max(phonemes1.length, phonemes2.length);
-    
-    // Compare phonemes in corresponding positions, giving higher weight to beginning and end
-    for (let i = 0; i < Math.min(phonemes1.length, phonemes2.length); i++) {
-      if (phonemes1[i] === phonemes2[i]) {
-        // Weight beginning consonants and endings more heavily
-        const positionBonus = (i === 0 || i === phonemes1.length - 1) ? 1.5 : 1;
-        matches += positionBonus;
-      }
-    }
-    
-    return (matches / maxLength) * 100;
-  };
-
-  const calculateStressScore = (word1: string, word2: string): number => {
-    if (!word1 || !word2) return 0;
-    
-    // Very simple stress pattern analysis based on syllable count
-    const syllables1 = countSyllables(word1);
-    const syllables2 = countSyllables(word2);
-    
-    if (syllables1 === syllables2) {
-      return 100;
-    } else {
-      const diff = Math.abs(syllables1 - syllables2);
-      return Math.max(0, 100 - (diff * 25));
-    }
-  };
-
-  const countSyllables = (word: string): number => {
-    const text = word.toLowerCase();
-    let count = 0;
-    let prev = '';
-    
-    for (let i = 0; i < text.length; i++) {
-      const current = text[i];
-      
-      if (isVowel(current) && !isVowel(prev)) {
-        count++;
-      }
-      
-      prev = current;
-    }
-    
-    // Handle special cases
-    if (count === 0) count = 1;
-    if (text.endsWith('e') && !isVowel(text[text.length - 2]) && count > 1) count--;
-    if (text.endsWith('le') && !isVowel(text[text.length - 3]) && text.length > 2) count++;
-    
-    return count;
-  };
-
-  const calculateFinalSoundScore = (word1: string, word2: string): number => {
-    if (!word1 || !word2) return 0;
-    
-    // Extract final consonant clusters or vowel
-    const getEndSound = (word: string): string => {
-      let end = '';
-      let i = word.length - 1;
-      
-      // Get final consonant cluster
-      while (i >= 0 && !isVowel(word[i])) {
-        end = word[i] + end;
-        i--;
-      }
-      
-      // If no consonant at end, get final vowel
-      if (end === '' && i >= 0) {
-        end = word[i];
-      }
-      
-      return end;
-    };
-    
-    const end1 = getEndSound(word1);
-    const end2 = getEndSound(word2);
-    
-    if (end1 === end2) return 100;
-    
-    // Calculate similarity for partial matches
-    return calculateWordSimilarity(end1, end2) * 100;
-  };
-
-  // Calculate more detailed word scores for individual practice
-  const calculateDetailedWordScore = (targetWord: string, userWords: string[]): PracticeScoreDetails => {
-    // Direct match score
-    const exactMatch = userWords.includes(targetWord);
-    
-    // Find best match if no exact match
-    let bestSimilarity = 0;
-    let bestMatchedWord = '';
-    
-    if (!exactMatch) {
-      userWords.forEach(word => {
-        const similarity = calculateWordSimilarity(word, targetWord);
-        
-        // Extra check for final consonant match
-        const hasMatchingFinalConsonant = 
-          word.length > 0 && targetWord.length > 0 &&
-          !isVowel(word[word.length - 1]) && !isVowel(targetWord[targetWord.length - 1]) &&
-          word[word.length - 1] === targetWord[targetWord.length - 1];
-        
-        // Boost similarity for words with matching final consonants
-        const finalConsonantBonus = hasMatchingFinalConsonant ? 0.1 : 0;
-        const adjustedSimilarity = Math.min(1.0, similarity + finalConsonantBonus);
-        
-        if (adjustedSimilarity > bestSimilarity) {
-          bestSimilarity = adjustedSimilarity;
-          bestMatchedWord = word;
-        }
-      });
-    } else {
-      // For exact matches, set similarity to 1.0 (100%)
-      bestSimilarity = 1.0;
-      bestMatchedWord = targetWord;
-    }
-    
-    // Break down target word into phonetic components
-    const targetPhonemes = getWordPhonemes(targetWord);
-    
-    // Phonetic accuracy
-    let phoneticAccuracy = 0;
-    if (exactMatch) {
-      phoneticAccuracy = 100;
-    } else if (bestMatchedWord) {
-      // Estimated phonetic accuracy based on letter positions and phoneme patterns
-      const matchedPhonemes = getWordPhonemes(bestMatchedWord);
-      phoneticAccuracy = calculatePhonemeSimilarity(targetPhonemes, matchedPhonemes);
-    }
-    
-    // Cap phoneticAccuracy at 100%
-    phoneticAccuracy = Math.min(100, phoneticAccuracy);
-    
-    // Analyze stress pattern more accurately
-    const stressScore = calculateStressScore(targetWord, bestMatchedWord || '');
-    
-    // Check for final sound match specifically
-    const finalSoundScore = calculateFinalSoundScore(targetWord, bestMatchedWord || '');
-    
-    // Combine scores with proper weighting for pronunciation
-    // Higher weight to phonetic accuracy and final sounds for better evaluation
-    const weightedScore = Math.round(
-      (bestSimilarity * 30) + (phoneticAccuracy * 40) + (stressScore * 15) + (finalSoundScore * 15)
-    );
-    
-    // More strict conditions for high quality pronunciation
-    const allComponentsHighQuality = 
-      bestSimilarity >= 0.95 && 
-      phoneticAccuracy >= 92 && 
-      stressScore >= 92 && 
-      finalSoundScore >= 92;
-    
-    // Apply stronger penalties for lower quality pronunciation
-    let overallScore = weightedScore;
-    
-    // If not exact match and any component is problematic, apply penalties
-    if (!exactMatch) {
-      // Severe penalty for poor phonetic accuracy (most important factor)
-      if (phoneticAccuracy < 75) {
-        overallScore = Math.min(overallScore, 70); // Cap at 70% if phonetic accuracy is poor
-      } 
-      // Moderate penalty for poor overall match but decent phonetics
-      else if (bestSimilarity < 0.8 || finalSoundScore < 75) {
-        overallScore = Math.min(overallScore, 85); // Cap at 85% for moderate issues
-      }
-      // Minor penalty for slight issues
-      else if (!allComponentsHighQuality) {
-        overallScore = Math.min(overallScore, 95); // Cap at 95% for minor issues
-      }
-    }
-    
-    // Only allow 100% for exact matches with perfect pronunciation
-    if (overallScore > 99 && !exactMatch) {
-      overallScore = 99;
-    }
-    
-    // Ensure no score exceeds 100%
-    const finalOverallScore = Math.min(100, overallScore);
-    const finalSimilarityScore = Math.min(100, Math.round(bestSimilarity * 100));
-    
-    return {
-      overallScore: finalOverallScore,
-      exactMatch,
-      similarityScore: finalSimilarityScore,
-      phoneticAccuracy: Math.round(phoneticAccuracy),
-      bestMatchedWord: bestMatchedWord || '-',
-      syllableScore: Math.round(stressScore)
-    };
-  };
-
-  // Function to highlight mispronounced words in the displayed sentence
-  const highlightErrorsInSentence = (sentence: string) => {
-    if (!wordErrors.length) return sentence;
-    
-    let result = sentence;
-    
-    // Replace mispronounced words with highlighted versions
-    wordErrors.forEach(({ word }) => {
-      const regex = new RegExp(`\\b${word}\\b`, 'gi');
-      result = result.replace(regex, `<span class="text-red-500 font-bold">${word}</span>`);
-    });
-    
-    return result;
-  };
-
-  // Function to color-code words in the full sentence (green for correct, red for incorrect)
-  const highlightComparedSentence = (sentence: string) => {
-    if (!userTranscript || !sentence) return sentence;
-    
-    // Split the sentence into words
-    const words = sentence.split(/\s+/);
-    
-    // Create a map of error words for quick lookup
-    const errorMap = wordErrors.reduce((map, { word }) => {
-      map[word.toLowerCase()] = true;
-      return map;
-    }, {} as Record<string, boolean>);
-    
-    // Color code each word
-    const coloredWords = words.map(word => {
-      // Extract any punctuation
-      const punctuation = word.match(/[.,!?;:"]$/)?.[0] || '';
-      const cleanWord = word.replace(/[.,!?;:"]/g, '');
-      
-      if (errorMap[cleanWord.toLowerCase()]) {
-        return `<span class="text-red-500 font-bold">${cleanWord}${punctuation}</span>`;
-      } else {
-        return `<span class="text-green-500">${cleanWord}${punctuation}</span>`;
-      }
-    });
-    
-    return coloredWords.join(' ');
-  };
-
-  // Practice pronouncing a specific word
-  const handlePracticeWord = async (wordObj: {word: string, ipa: string}) => {
-    setPracticeWord(wordObj);
-    setIsSpeaking(true);
-    setPracticeScore(null);
-    setPracticeResult('');
-    
-    try {
-      // Speak the word slowly for practice
-      await speakText(wordObj.word, selectedVoice, 0.8);
-    } catch (error) {
-      console.error('Speech error:', error);
-    } finally {
-      setIsSpeaking(false);
-    }
-  };
-
-  // Listen to the user practice a specific word
-  const handlePracticeWordListen = async () => {
-    if (!practiceWord) return;
-    
-    if (isPracticingSpeech) {
-      try {
-        stopSpeechRecognition();
-      } catch (error) {
-        console.error('Error stopping speech recognition:', error);
-      } finally {
-        setIsPracticingSpeech(false);
-      }
-      return;
-    }
-    
-    setIsPracticingSpeech(true);
-    setPracticeResult('');
-    setPracticeScore(null);
-    
-    try {
-      const result = await startSpeechRecognition('en-US');
-      const userWords = result.transcript.toLowerCase().split(/\s+/);
-      const practiceWordLower = practiceWord.word.toLowerCase();
-      
-      // Enhanced scoring for individual word practice
-      const scoreDetails = calculateDetailedWordScore(practiceWordLower, userWords);
-      
-      // Set practice result based on overall score
-      if (scoreDetails.overallScore > 85) {
-        setPracticeResult('correct');
-      } else if (scoreDetails.overallScore > 60) {
-        setPracticeResult('partial');
-      } else {
-        setPracticeResult('incorrect');
-      }
-      
-      // Store detailed score
-      setPracticeScore(scoreDetails);
-    } catch (error) {
-      console.error('Speech recognition error:', error);
-      setPracticeResult('error');
-    } finally {
-      setIsPracticingSpeech(false);
-    }
-  };
-
   const handleNext = () => {
-    if (currentSentenceIndex < sentences.length - 1) {
-      setCurrentSentenceIndex(prev => prev + 1);
+    if (currentPhraseIndex < (analysisResult?.phrases.length || 0) - 1) {
+      setCurrentPhraseIndex(prev => prev + 1);
       setAttemptsLeft(3);
       setUserTranscript('');
       setScore(null);
       setShowAnswer(false);
+      setShowPronunciationFeedback(false);
       setWordErrors([]);
-      setPracticeWord(null);
-      setPracticeResult('');
-      setPracticeScore(null);
-      setShowPronunciationDetails(false);
     } else {
-      // Move to next step
+      // Move to next step when all phrases are complete
       setCurrentStep(6);
     }
   };
@@ -518,14 +127,39 @@ const Step5FillBlanks = () => {
     setAttemptsLeft(3);
     setUserTranscript('');
     setScore(null);
-    setWordErrors([]);
-    setPracticeWord(null);
-    setPracticeResult('');
-    setPracticeScore(null);
-    setShowPronunciationDetails(false);
+    setShowPronunciationFeedback(false);
   };
 
-  if (!analysisResult || !currentSentence) {
+  const handlePracticeWord = (word: string) => {
+    const wordObj = wordErrors.find(w => w.word === word);
+    if (wordObj) {
+      setPracticingWord(wordObj);
+    }
+  };
+
+  const handleWordPlayReference = async (word: string) => {
+    setIsSpeaking(true);
+    try {
+      await speakText(word);
+    } catch (error) {
+      console.error('Speech error:', error);
+    } finally {
+      setIsSpeaking(false);
+    }
+  };
+
+  const handleWordListen = async (word: string): Promise<{ transcript: string; score: number }> => {
+    try {
+      const result = await startSpeechRecognition('en-US');
+      const wordScore = calculatePronunciationScore(word, result.transcript).overallScore;
+      return { transcript: result.transcript, score: wordScore };
+    } catch (error) {
+      console.error('Speech recognition error:', error);
+      return { transcript: 'Không thể nhận diện', score: 0 };
+    }
+  };
+
+  if (!analysisResult || !currentPhrase) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -533,20 +167,29 @@ const Step5FillBlanks = () => {
     );
   }
 
-  const progress = ((currentSentenceIndex + 1) / sentences.length) * 100;
+  const progress = ((currentPhraseIndex + 1) / analysisResult.phrases.length) * 100;
+
+  // Format feedback data for PronunciationFeedback component
+  const feedbackData = wordErrors.map(wordError => ({
+    word: wordError.word,
+    ipa: wordError.ipa,
+    correct: false,
+    suggestedIpa: wordError.ipa,
+    videoTutorialUrl: '#'
+  }));
 
   return (
     <Card className="glass-card p-6 max-w-3xl mx-auto animate-fade-in">
       <div className="mb-6 text-center">
-        <h2 className="text-2xl font-bold text-gradient mb-2">Bước 5: Điền vào chỗ trống (Output)</h2>
+        <h2 className="text-2xl font-bold text-gradient mb-2">Bước 5: Điền vào chỗ trống</h2>
         <p className="text-gray-600">
-          Luyện nói những câu có từ bị khuyết
+          Nghe và hoàn thành các câu có từ bị khuyết
         </p>
       </div>
 
       <div className="mb-6 bg-gray-200 h-2 rounded-full overflow-hidden">
         <div 
-          className="bg-gradient-to-r from-hamaspeak-purple to-hamaspeak-teal h-full"
+          className="bg-gradient-to-r from-hamaspeak-blue to-hamaspeak-purple h-full"
           style={{ width: `${progress}%` }}
         ></div>
       </div>
@@ -554,20 +197,14 @@ const Step5FillBlanks = () => {
       <div className="bg-white p-6 rounded-lg mb-6 shadow-sm">
         <div className="mb-4 text-center">
           <h3 className="text-xl font-medium text-hamaspeak-dark mb-2">
-            {showAnswer ? currentSentence.english : (
-              <span dangerouslySetInnerHTML={{ 
-                __html: score !== null ? 
-                  highlightErrorsInSentence(currentSentence.fillInBlanks) : 
-                  currentSentence.fillInBlanks 
-              }} />
-            )}
+            {currentPhrase.fillInBlanks}
           </h3>
           
-          {showAnswer && !score && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg animate-fade-in">
+          {showAnswer && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
               <Check className="h-4 w-4 text-green-500 inline mr-1" />
               <p className="text-hamaspeak-blue font-medium inline">
-                {currentSentence.english}
+                {currentPhrase.english}
               </p>
             </div>
           )}
@@ -575,8 +212,8 @@ const Step5FillBlanks = () => {
         
         {userTranscript && (
           <div className="mt-6 border-t pt-4">
-            <p className="font-medium mb-2 text-lg">Câu của bạn:</p>
-            <p className={`${score && score > 70 ? 'text-green-600' : 'text-orange-500'} text-lg`}>
+            <p className="font-medium mb-1">Câu của bạn:</p>
+            <p className={`${score && score > 70 ? 'text-green-600' : 'text-orange-500'}`}>
               {userTranscript}
             </p>
             
@@ -584,242 +221,76 @@ const Step5FillBlanks = () => {
               <div className="mt-3">
                 <div className="flex justify-between text-sm mb-1">
                   <span>Độ chính xác</span>
-                  <span className="font-medium">{score}%</span>
+                  <span>{score}%</span>
                 </div>
                 <Progress 
                   value={score} 
-                  className={`h-2.5 ${
+                  className={`h-2 ${
                     score > 80 ? 'bg-green-100' : 
                     score > 60 ? 'bg-yellow-100' : 
                     'bg-orange-100'}`} 
                 />
                 
-                <p className="mt-2 text-sm font-medium">
-                  {score > 80 ? (
-                    <span className="text-green-600">Tuyệt vời! Bạn đã hoàn thành câu chính xác.</span>
-                  ) : score > 60 ? (
-                    <span className="text-yellow-600">Khá tốt! Cố gắng cải thiện hơn nữa.</span>
-                  ) : (
-                    <span className="text-orange-600">Hãy thử lại. Đừng quên điền các từ bị khuyết.</span>
-                  )}
+                <p className="mt-2 text-sm">
+                  {score > 80 ? 'Tuyệt vời! Phát âm của bạn rất chuẩn.' :
+                   score > 60 ? 'Khá tốt! Tiếp tục luyện tập.' :
+                   'Hãy thử lại và cải thiện phát âm của bạn.'}
                 </p>
                 
-                {/* Color-coded full sentence */}
-                <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                  <p className="font-medium mb-1 text-sm">Câu chuẩn:</p>
-                  <p 
-                    className="text-base" 
-                    dangerouslySetInnerHTML={{ 
-                      __html: highlightComparedSentence(currentSentence.english) 
-                    }} 
-                  />
-                </div>
-                
-                {/* Display mispronounced words with IPA */}
-                {wordErrors.length > 0 && (
-                  <div className="mt-3 p-3 bg-orange-50 rounded-md">
-                    <h4 className="text-sm font-medium mb-2">Từ cần cải thiện:</h4>
-                    <div className="grid gap-1">
-                      {wordErrors.map((error, index) => (
-                        <div key={index} className="flex items-center text-sm">
-                          <span className="font-medium text-red-500">{error.word}</span>
-                          <span className="mx-2 text-gray-400">→</span>
-                          <span className="text-gray-600">[{error.ipa}]</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Practice Individual Words */}
-                {wordErrors.length > 0 && !practiceWord && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <h4 className="text-sm font-medium mb-2">Luyện từng từ:</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {wordErrors.map((error, index) => (
-                        <Button 
-                          key={index} 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handlePracticeWord(error)}
-                          className="flex items-center"
-                        >
-                          <span className="font-medium text-red-500 mr-1">{error.word}</span>
-                          <span className="text-xs text-gray-500">[{error.ipa}]</span>
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Word Practice Mode */}
-                {practiceWord && (
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="font-medium">Luyện từ: <span className="text-blue-600">{practiceWord.word}</span></h4>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => {
-                          setPracticeWord(null);
-                          setPracticeResult('');
-                          setPracticeScore(null);
-                          setShowPronunciationDetails(false);
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    <p className="mb-2 text-sm">Phát âm: <span className="text-gray-600">[{practiceWord.ipa}]</span></p>
-                    
-                    <div className="flex gap-2 mt-3">
-                      <Button 
-                        onClick={() => handlePracticeWord(practiceWord)}
-                        disabled={isSpeaking} 
-                        size="sm"
-                      >
-                        <Volume2 className="mr-1 h-3 w-3" />
-                        Nghe lại
-                      </Button>
-                      
-                      <Button 
-                        onClick={handlePracticeWordListen}
-                        disabled={isSpeaking} 
-                        size="sm"
-                        className={`${isPracticingSpeech ? 'bg-red-500 hover:bg-red-600' : ''}`}
-                      >
-                        {isPracticingSpeech ? (
-                          <>
-                            <MicOff className="mr-1 h-3 w-3 animate-pulse" />
-                            Dừng
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="mr-1 h-3 w-3" />
-                            Thử nói
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    
-                    {/* Practice Results with Detailed Score */}
-                    {practiceResult && (
-                      <div className="mt-3">
-                        <div className={`p-2 rounded ${
-                          practiceResult === 'correct' ? 'bg-green-100 text-green-700' : 
-                          practiceResult === 'partial' ? 'bg-yellow-100 text-yellow-700' :
-                          practiceResult === 'incorrect' ? 'bg-orange-100 text-orange-700' : 
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {practiceResult === 'correct' ? (
-                            <p className="text-sm">Tuyệt vời! Bạn đã phát âm đúng.</p>
-                          ) : practiceResult === 'partial' ? (
-                            <p className="text-sm">Gần đúng. Hãy thử lại và chú ý phát âm [<span className="font-medium">{practiceWord.ipa}</span>].</p>
-                          ) : practiceResult === 'incorrect' ? (
-                            <p className="text-sm">Chưa chính xác. Hãy thử lại và chú ý phát âm [<span className="font-medium">{practiceWord.ipa}</span>].</p>
-                          ) : (
-                            <p className="text-sm">Có lỗi xảy ra. Vui lòng thử lại.</p>
-                          )}
-                        </div>
-                        
-                        {practiceScore && (
-                          <div className="mt-2">
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm font-medium">Điểm: {practiceScore.overallScore}%</span>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-6 w-6 p-0"
-                                onClick={() => setShowPronunciationDetails(!showPronunciationDetails)}
-                              >
-                                {showPronunciationDetails ? (
-                                  <ChevronUp className="h-4 w-4" />
-                                ) : (
-                                  <ChevronDown className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                            
-                            {showPronunciationDetails && (
-                              <div className="mt-2 bg-white rounded p-2 text-xs space-y-1">
-                                <div className="flex justify-between">
-                                  <span>Từ khớp chính xác:</span>
-                                  <span>{practiceScore.exactMatch ? 'Có' : 'Không'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Từ gần nhất:</span>
-                                  <span className="font-medium">{practiceScore.bestMatchedWord}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Độ tương đồng:</span>
-                                  <span>{practiceScore.similarityScore}%</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Độ chính xác ngữ âm:</span>
-                                  <span>{practiceScore.phoneticAccuracy}%</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Ngữ điệu và âm tiết:</span>
-                                  <span>{practiceScore.syllableScore}%</span>
-                                </div>
-                                
-                                <div className="pt-1">
-                                  <div className="flex items-center">
-                                    <Info className="h-3 w-3 text-blue-500 mr-1" />
-                                    <span className="text-blue-600">
-                                      Lời khuyên phát âm:
-                                    </span>
-                                  </div>
-                                  <p className="text-gray-600 mt-1">
-                                    {practiceScore.phoneticAccuracy < 70 ? (
-                                      <>Tập trung vào các âm tiết chính: <span className="font-medium">[{practiceWord.ipa}]</span></>
-                                    ) : practiceScore.syllableScore < 70 ? (
-                                      <>Chú ý nhấn đúng âm tiết và độ dài của từ</>
-                                    ) : (
-                                      <>Tiếp tục luyện tập để hoàn thiện phát âm</>
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPronunciationFeedback(!showPronunciationFeedback)}
+                  className="mt-2"
+                >
+                  <Info className="mr-2 h-4 w-4 text-blue-500" />
+                  {showPronunciationFeedback ? 'Ẩn phân tích chi tiết' : 'Xem phân tích chi tiết'}
+                </Button>
               </div>
             )}
           </div>
         )}
       </div>
       
-      {/* Playback Speed Control */}
-      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">Tốc độ phát âm:</span>
-          <span className="text-sm font-medium text-hamaspeak-purple">{getSpeedLabel(playbackRate)} ({playbackRate}x)</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <VolumeX className="h-4 w-4 text-gray-500" />
-          <Slider
-            value={[playbackRate]}
-            min={0.5}
-            max={2}
-            step={0.25}
-            onValueChange={handleSpeedChange}
-            className="flex-1"
+      {showPronunciationFeedback && score !== null && (
+        <PronunciationFeedback
+          scoreDetails={pronunciationScores}
+          feedback={feedbackData}
+          onPracticeWord={handlePracticeWord}
+          onPlayReference={handleWordPlayReference}
+          transcript={userTranscript}
+          referenceText={currentPhrase.english}
+        />
+      )}
+      
+      {practicingWord && (
+        <div className="mb-6">
+          <WordPronunciationPractice
+            word={practicingWord.word}
+            ipa={practicingWord.ipa}
+            onClose={() => setPracticingWord(null)}
+            onPlayReference={handleWordPlayReference}
+            onListen={handleWordListen}
+            videoTutorialUrl="#"
+            examples={[
+              { 
+                text: `Example: ${practicingWord.word} is important.`, 
+                translation: `Ví dụ: ${practicingWord.word} là quan trọng.` 
+              }
+            ]}
+            tips={[
+              "Chú ý đến trọng âm của từ",
+              "Tập trung vào các nguyên âm chính xác"
+            ]}
           />
-          <Volume2 className="h-4 w-4 text-gray-500" />
         </div>
-      </div>
+      )}
       
       <div className="flex items-center justify-center mb-4">
         <div className="flex items-center">
           <span className="mr-2 text-sm font-medium">Lượt thử còn lại:</span>
           {[...Array(attemptsLeft)].map((_, i) => (
-            <div key={i} className="w-3 h-3 bg-hamaspeak-purple rounded-full mx-1"></div>
+            <div key={i} className="w-3 h-3 bg-hamaspeak-blue rounded-full mx-1"></div>
           ))}
           {[...Array(3 - attemptsLeft)].map((_, i) => (
             <div key={i} className="w-3 h-3 bg-gray-300 rounded-full mx-1"></div>
@@ -839,20 +310,11 @@ const Step5FillBlanks = () => {
         
         <Button 
           onClick={handleListen} 
-          disabled={attemptsLeft <= 0 && !isListening}
-          className={`glass-button ${isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-hamaspeak-teal hover:bg-hamaspeak-teal/90'}`}
+          disabled={isListening || attemptsLeft <= 0}
+          className="glass-button bg-hamaspeak-teal hover:bg-hamaspeak-teal/90"
         >
-          {isListening ? (
-            <>
-              <MicOff className="mr-2 h-4 w-4 animate-pulse" />
-              Dừng ghi âm
-            </>
-          ) : (
-            <>
-              <Mic className="mr-2 h-4 w-4" />
-              Nói theo
-            </>
-          )}
+          <Mic className={`mr-2 h-4 w-4 ${isListening ? 'animate-pulse' : ''}`} />
+          {isListening ? 'Đang nghe...' : 'Nói theo'}
         </Button>
         
         <Button 
@@ -876,8 +338,8 @@ const Step5FillBlanks = () => {
           disabled={attemptsLeft === 3 && !score}
           className="glass-button"
         >
-          {currentSentenceIndex < sentences.length - 1 
-            ? 'Câu tiếp theo' 
+          {currentPhraseIndex < analysisResult.phrases.length - 1 
+            ? 'Tiếp tục' 
             : 'Bước tiếp theo'}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

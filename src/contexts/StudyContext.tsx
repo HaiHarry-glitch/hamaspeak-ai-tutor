@@ -1,10 +1,14 @@
+
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { TextAnalysisResult, analyzeText } from '@/services/textAnalyzer';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface FlashcardState {
   currentIndex: number;
   isFlipped: boolean;
 }
+
+export type TopicGroup = 'part1' | 'part23' | 'custom';
 
 interface StudyContextType {
   currentText: string;
@@ -18,6 +22,10 @@ interface StudyContextType {
   flashcardState: FlashcardState;
   setFlashcardState: React.Dispatch<React.SetStateAction<FlashcardState>>;
   analyzeUserText: (text: string) => Promise<void>;
+  selectedTopicGroup: TopicGroup;
+  setSelectedTopicGroup: (group: TopicGroup) => void;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (isOpen: boolean) => void;
 }
 
 const StudyContext = createContext<StudyContextType | undefined>(undefined);
@@ -32,13 +40,27 @@ export const StudyProvider = ({ children }: StudyProviderProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedVoice, setSelectedVoice] = useState('');
+  const [selectedTopicGroup, setSelectedTopicGroup] = useState<TopicGroup>('part1');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [flashcardState, setFlashcardState] = useState<FlashcardState>({
     currentIndex: 0,
     isFlipped: false
   });
+  
+  const { isAuthenticated, useSessionTry, sessionTriesRemaining } = useAuth();
 
   const analyzeUserText = async (text: string) => {
     try {
+      // Check if user has session tries remaining or is authenticated
+      if (!isAuthenticated && sessionTriesRemaining <= 0) {
+        setIsAuthModalOpen(true);
+        return;
+      }
+      
+      if (!isAuthenticated) {
+        useSessionTry();
+      }
+      
       setIsAnalyzing(true);
       const result = await analyzeText(text);
       setAnalysisResult(result);
@@ -67,6 +89,10 @@ export const StudyProvider = ({ children }: StudyProviderProps) => {
     flashcardState,
     setFlashcardState,
     analyzeUserText,
+    selectedTopicGroup,
+    setSelectedTopicGroup,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
   };
 
   return (
