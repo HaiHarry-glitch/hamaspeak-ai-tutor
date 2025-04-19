@@ -344,4 +344,3 @@ export class SpeechService {
 const speechService = new SpeechService();
 
 export default speechService;
-export type { PronunciationResult };
