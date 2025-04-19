@@ -43,6 +43,9 @@ export interface ScoreDetails {
   intonationScore?: number;
   stressScore?: number;
   rhythmScore?: number;
+  missedWords?: string[]; // Added missing properties
+  mispronunciations?: string[]; // Added missing properties
+  wordErrorRate?: number;
 }
 
 export interface WordFeedback {

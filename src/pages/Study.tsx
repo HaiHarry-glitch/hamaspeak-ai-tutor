@@ -61,6 +61,11 @@ const StudyContent = () => {
     }
   };
 
+  // Create a type-safe props object for the pronunciation components
+  const pronunciationProps: PronunciationComponentProps = {
+    onAnalyzePronunciation: handleAnalyzePronunciation
+  };
+
   return (
     <div className="min-h-screen pb-10">
       <Header />
@@ -107,34 +112,34 @@ const StudyContent = () => {
         {currentStep === 2 && <Step2Flashcards />}
         {currentStep === 3 && (
           <Step3EnglishSpeaking 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
+            {...pronunciationProps}
           />
         )}
         {currentStep === 4 && (
           <Step4VietnameseSpeaking 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
+            {...pronunciationProps}
           />
         )}
         
         {/* Output steps (5-8) */}
         {currentStep === 5 && (
           <Step5FillBlanks 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
+            {...pronunciationProps}
           />
         )}
         {currentStep === 6 && (
           <Step6ListeningComprehension 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
+            {...pronunciationProps}
           />
         )}
         {currentStep === 7 && (
           <Step7ParagraphSpeaking 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
+            {...pronunciationProps}
           />
         )}
         {currentStep === 8 && (
           <Step8CompleteSpeaking 
-            onAnalyzePronunciation={handleAnalyzePronunciation}
+            {...pronunciationProps}
           />
         )}
         

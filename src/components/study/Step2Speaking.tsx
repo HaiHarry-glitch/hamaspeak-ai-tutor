@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Volume2, Mic, ArrowRight, Loader2, Repeat } from 'lucide-react';
 import { speakText, startSpeechRecognition, calculatePronunciationScore } from '@/utils/speechUtils';
 import { Progress } from '@/components/ui/progress';
+import { ScoreDetails } from '@/types/pronunciation';
 
 const Step2Speaking = () => {
   const { analysisResult, setCurrentStep, selectedVoice } = useStudy();
@@ -14,7 +14,7 @@ const Step2Speaking = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
-  const [score, setScore] = useState<number | null>(null);
+  const [scoreDetails, setScoreDetails] = useState<ScoreDetails | null>(null);
   const [showEnglish, setShowEnglish] = useState(false);
 
   const currentPhrase = analysisResult?.phrases[currentPhraseIndex];
@@ -37,17 +37,18 @@ const Step2Speaking = () => {
     
     setIsListening(true);
     setUserTranscript('');
-    setScore(null);
+    setScoreDetails(null);
     
     try {
       const result = await startSpeechRecognition('en-US');
       setUserTranscript(result.transcript);
       
-      const pronunciationScore = calculatePronunciationScore(
+      const pronunciationScoreDetails = calculatePronunciationScore(
         currentPhrase.english, 
         result.transcript
       );
-      setScore(pronunciationScore);
+      
+      setScoreDetails(pronunciationScoreDetails);
       
       setAttemptsLeft(prev => prev - 1);
     } catch (error) {
@@ -63,10 +64,9 @@ const Step2Speaking = () => {
       setCurrentPhraseIndex(prev => prev + 1);
       setAttemptsLeft(3);
       setUserTranscript('');
-      setScore(null);
+      setScoreDetails(null);
       setShowEnglish(false);
     } else {
-      // Move to next step when all phrases are complete
       setCurrentStep(3);
     }
   };
@@ -74,7 +74,7 @@ const Step2Speaking = () => {
   const resetAttempts = () => {
     setAttemptsLeft(3);
     setUserTranscript('');
-    setScore(null);
+    setScoreDetails(null);
   };
 
   if (!analysisResult || !currentPhrase) {

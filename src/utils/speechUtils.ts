@@ -1,4 +1,3 @@
-
 import { ScoreDetails } from '@/types/pronunciation';
 
 // Available voices for TTS
@@ -129,20 +128,27 @@ export const calculatePronunciationScore = (
       // Find the closest word in reference
       const closest = refWords.reduce((prev, curr) => {
         return getLevenshteinDistance(w, curr) < getLevenshteinDistance(w, prev) ? curr : prev;
-      }, refWords[0]);
+      }, refWords[0] || '');
       
       return `${w} → ${closest}`;
     });
   
   // Calculate various scores
-  const accuracyScore = Math.min(100, Math.round((wordsRecognized.length / refWords.length) * 100));
+  const accuracyScore = Math.min(100, Math.round((wordsRecognized.length / Math.max(1, refWords.length)) * 100));
   
   // Fluency is affected by missed words and incorrect word order
   const fluencyScore = Math.min(100, Math.max(0, 100 - missedWords.length * 10 - mispronunciations.length * 5));
   
+  // Completeness score
+  const completenessScore = Math.min(100, Math.round((spokenWords.length / Math.max(1, refWords.length)) * 100));
+  
   // Stress and intonation are approximated
   const stressScore = Math.min(100, Math.round(accuracyScore * 0.8 + Math.random() * 20));
   const intonationScore = Math.min(100, Math.round(fluencyScore * 0.7 + Math.random() * 30));
+  const rhythmScore = Math.min(100, Math.round((fluencyScore + intonationScore) / 2));
+  
+  // Word error rate
+  const wordErrorRate = Math.max(0, Math.min(100, Math.round(30 - accuracyScore * 0.25)));
   
   // Overall score is a weighted average
   const overallScore = Math.round(
@@ -156,14 +162,14 @@ export const calculatePronunciationScore = (
     overallScore,
     accuracyScore,
     fluencyScore,
-    completenessScore: Math.min(100, Math.round((spokenWords.length / refWords.length) * 100)),
+    completenessScore,
     pronScore: accuracyScore,
     intonationScore,
     stressScore,
-    rhythmScore: Math.round((fluencyScore + intonationScore) / 2),
-    wordsRecognized,
+    rhythmScore,
     missedWords,
-    mispronunciations
+    mispronunciations,
+    wordErrorRate
   };
 };
 
