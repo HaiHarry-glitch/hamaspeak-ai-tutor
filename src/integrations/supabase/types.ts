@@ -9,7 +9,219 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      custom_prompts: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: number
+          prompt_text: string
+          suggested_duration_seconds: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: number
+          prompt_text: string
+          suggested_duration_seconds?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: number
+          prompt_text?: string
+          suggested_duration_seconds?: number | null
+        }
+        Relationships: []
+      }
+      part1_questions: {
+        Row: {
+          created_at: string | null
+          difficulty: number | null
+          id: number
+          question_text: string
+          topic_id: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          difficulty?: number | null
+          id?: number
+          question_text: string
+          topic_id?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          difficulty?: number | null
+          id?: number
+          question_text?: string
+          topic_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "part1_questions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      part2_cue_cards: {
+        Row: {
+          created_at: string | null
+          cue_card_prompt: string
+          id: number
+          preparation_time_seconds: number | null
+          speaking_time_seconds: number | null
+          topic_id: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          cue_card_prompt: string
+          id?: number
+          preparation_time_seconds?: number | null
+          speaking_time_seconds?: number | null
+          topic_id?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          cue_card_prompt?: string
+          id?: number
+          preparation_time_seconds?: number | null
+          speaking_time_seconds?: number | null
+          topic_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "part2_cue_cards_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          display_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          display_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      submissions: {
+        Row: {
+          audio_url: string
+          custom_prompt_id: number | null
+          duration_seconds: number | null
+          feedback: string | null
+          id: string
+          part1_question_id: number | null
+          part2_cue_card_id: number | null
+          score: number | null
+          submission_type: string
+          submitted_at: string | null
+          topic_id: number | null
+          user_id: string
+        }
+        Insert: {
+          audio_url: string
+          custom_prompt_id?: number | null
+          duration_seconds?: number | null
+          feedback?: string | null
+          id?: string
+          part1_question_id?: number | null
+          part2_cue_card_id?: number | null
+          score?: number | null
+          submission_type: string
+          submitted_at?: string | null
+          topic_id?: number | null
+          user_id: string
+        }
+        Update: {
+          audio_url?: string
+          custom_prompt_id?: number | null
+          duration_seconds?: number | null
+          feedback?: string | null
+          id?: string
+          part1_question_id?: number | null
+          part2_cue_card_id?: number | null
+          score?: number | null
+          submission_type?: string
+          submitted_at?: string | null
+          topic_id?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_custom_prompt_id_fkey"
+            columns: ["custom_prompt_id"]
+            isOneToOne: false
+            referencedRelation: "custom_prompts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_part1_question_id_fkey"
+            columns: ["part1_question_id"]
+            isOneToOne: false
+            referencedRelation: "part1_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_part2_cue_card_id_fkey"
+            columns: ["part2_cue_card_id"]
+            isOneToOne: false
+            referencedRelation: "part2_cue_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      topics: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon_name: string | null
+          id: number
+          name: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: number
+          name: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: number
+          name?: string
+          type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
