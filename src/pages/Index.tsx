@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import {
   CardContent,
   CardFooter
 } from '@/components/ui/card';
+import { cn } from "@/lib/utils"
 
 const Index = () => {
   return (
