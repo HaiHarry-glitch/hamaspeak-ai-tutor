@@ -258,10 +258,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return newTriesRemaining;
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     isLoading,
     isAuthenticated: !!user,
+    sessionTriesRemaining,
     dailyUsageCount,
     remainingUsage: user ? Infinity : Math.max(0, MAX_FREE_USAGE - dailyUsageCount),
     incrementDailyUsage,

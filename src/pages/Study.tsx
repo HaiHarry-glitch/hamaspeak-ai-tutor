@@ -41,10 +41,8 @@ const StudyContent = () => {
   const [sdkLoaded, setSdkLoaded] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   
-  // Explicitly type the pronunciation props
   const handleAnalyzePronunciation: PronunciationComponentProps['onAnalyzePronunciation'] = async (text) => {
     try {
-      // Add a check for microphone permissions
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch (permissionError) {
@@ -55,14 +53,12 @@ const StudyContent = () => {
 
       console.log('Starting pronunciation assessment for:', text);
       
-      // Thêm timeout dài hơn cho API call
       const timeoutPromise = new Promise<PronunciationResult>((_, reject) => {
         setTimeout(() => {
           reject(new Error('Timeout: Phân tích phát âm mất quá nhiều thời gian'));
-        }, 30000); // 30 giây timeout
+        }, 30000);
       });
       
-      // Gọi service với khả năng timeout
       const result = await Promise.race([
         SpeechService.assessPronunciationFromMicrophone(text),
         timeoutPromise
@@ -70,14 +66,12 @@ const StudyContent = () => {
       
       console.log('Pronunciation assessment result:', result);
       
-      // Add to history
       setPronunciationHistory(prev => [...prev, result]);
       
       return result;
     } catch (error) {
       console.error('Speech service error:', error);
       
-      // Provide more specific error messages based on the error
       if (error.message && error.message.includes('Speech was not recognized')) {
         console.warn('Speech not recognized error:', error.message);
         toast.error('Không thể nhận diện giọng nói. Vui lòng nói rõ hơn hoặc kiểm tra microphone.');
@@ -91,7 +85,6 @@ const StudyContent = () => {
         toast.error('Lỗi dịch vụ phân tích phát âm. Đang sử dụng dữ liệu mẫu.');
       }
       
-      // Return a simplified mock result when there's an error
       return {
         text: text,
         overallScore: {
@@ -106,15 +99,12 @@ const StudyContent = () => {
     }
   };
 
-  // Create a props object for the pronunciation components
   const pronunciationProps: PronunciationComponentProps = {
     onAnalyzePronunciation: handleAnalyzePronunciation
   };
 
-  // Show an error message if script loading failed
   if (loadError) {
     console.warn(loadError);
-    // We'll continue without the SDK, fallback will be used
   }
 
   return (
@@ -172,10 +162,8 @@ const StudyContent = () => {
           </>
         )}
         
-        {/* Collocation View - shown after analysis but before step 1 */}
         {currentStep === 0.5 && <CollocationsView />}
         
-        {/* Input steps (1-4) */}
         {currentStep === 1 && <Step1Listening />}
         {currentStep === 2 && <Step2Flashcards />}
         {currentStep === 3 && (
@@ -186,7 +174,6 @@ const StudyContent = () => {
         )}
         {currentStep === 4.5 && <Step4FullSpeaking />}
         
-        {/* Output steps (5-8) */}
         {currentStep === 5 && (
           <Step5FillBlanks onAnalyzePronunciation={pronunciationProps.onAnalyzePronunciation} />
         )}

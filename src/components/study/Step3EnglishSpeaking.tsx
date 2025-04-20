@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Volume2, Mic, ArrowRight, Loader2, Info } from 'lucide-react';
-import { speakText, getIpaTranscription } from '@/utils/speechUtils';
+import { speakText, getIpaTranscription, startSpeechRecognition, stopSpeechRecognition } from '@/utils/speechUtils';
 import { Progress } from '@/components/ui/progress';
 import PronunciationFeedback from './PronunciationFeedback';
 import WordPronunciationPractice from './WordPronunciationPractice';
