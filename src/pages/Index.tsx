@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { TextRotate } from '@/components/ui/text-rotate';
 import { Mic, BookOpen, GraduationCap, Award } from 'lucide-react';
+import PricingCard from '@/components/pricing/PricingCard';
 import { 
   Card,
   CardHeader,
@@ -10,34 +12,33 @@ import {
   CardContent,
   CardFooter
 } from '@/components/ui/card';
-import { cn } from "@/lib/utils"
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center px-4 overflow-hidden">
+      <section className="relative pt-20 pb-32 px-4 overflow-hidden">
         <div className="container mx-auto text-center max-w-4xl">
-          <h1 className="text-6xl md:text-8xl font-bold mb-6 text-white">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 text-gray-900">
             Hamaspeak
           </h1>
-          <div className="text-xl md:text-2xl text-gray-300 mb-10">
-            <p className="mb-4">Nền tảng học tiếng Anh thông minh với</p>
+          <div className="text-xl md:text-2xl text-gray-700 mb-10 space-y-2">
+            <p>Nền tảng học tiếng Anh thông minh với</p>
             <TextRotate 
               words={[
                 "công nghệ AI nhận diện phát âm",
                 "phân tích phát âm chi tiết",
                 "luyện tập toàn diện"
-              ]}
-              className="h-24"
+              ]} 
+              className="font-semibold"
             />
           </div>
           
-          <div className="flex flex-col md:flex-row gap-6 justify-center mt-12">
+          <div className="space-y-4 md:space-y-0 md:space-x-4 flex flex-col md:flex-row justify-center">
             <Button 
               asChild
               size="lg" 
-              className="bg-blue-600 hover:bg-blue-700 text-lg py-6 px-8 rounded-full"
+              className="bg-blue-600 hover:bg-blue-700 text-lg py-6 px-8"
             >
               <Link to="/study">
                 <Mic className="mr-2 h-5 w-5" /> 
@@ -48,7 +49,7 @@ const Index = () => {
             <Button 
               variant="outline" 
               size="lg" 
-              className="border-2 border-blue-600 text-blue-600 hover:bg-blue-900/10 text-lg py-6 px-8 rounded-full"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50 text-lg py-6 px-8"
             >
               <BookOpen className="mr-2 h-5 w-5" />
               Tìm hiểu thêm
@@ -56,150 +57,223 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Decorative Elements */}
-        <div className="absolute inset-0 overflow-hidden -z-10">
-          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-500/30 rounded-full filter blur-3xl animate-blob" />
-          <div className="absolute top-3/4 right-1/4 w-72 h-72 bg-purple-500/30 rounded-full filter blur-3xl animate-blob animation-delay-2000" />
-          <div className="absolute bottom-1/4 left-1/2 w-72 h-72 bg-pink-500/30 rounded-full filter blur-3xl animate-blob animation-delay-4000" />
+        {/* Decorative background elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob" />
+          <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000" />
+          <div className="absolute bottom-1/4 left-1/3 w-64 h-64 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000" />
         </div>
       </section>
-
-      {/* Features Section */}
-      <section className="py-24 bg-black/50 backdrop-blur-lg">
+      
+      {/* Features */}
+      <section className="py-16 bg-white/80 backdrop-blur-sm">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-16 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-            Tính năng nổi bật
-          </h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gradient">Tính năng nổi bật</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {features.map((feature, index) => (
-              <Card key={index} className="bg-gray-800/50 border-gray-700 hover:border-blue-500/50 transition-all duration-300">
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center mb-4">
-                    {feature.icon}
-                  </div>
-                  <CardTitle className="text-white">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-400">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <FeatureCard 
+              title="Phân tích phát âm" 
+              description="Công nghệ AI nhận diện và đánh giá khả năng phát âm của bạn, đưa ra phản hồi chi tiết."
+              icon={<Mic />}
+            />
+            
+            <FeatureCard 
+              title="Học từ vựng theo chủ đề" 
+              description="Hệ thống học từ vựng được phân loại theo chủ đề, giúp bạn ghi nhớ hiệu quả."
+              icon={<BookOpen />}
+            />
+            
+            <FeatureCard 
+              title="Luyện tập toàn diện" 
+              description="8 bước luyện tập từ đơn giản đến phức tạp, giúp nâng cao kỹ năng nói."
+              icon={<GraduationCap />}
+            />
           </div>
         </div>
       </section>
-
-      {/* Pricing Section */}
-      <section className="py-24 relative overflow-hidden">
+      
+      {/* How it works */}
+      <section className="py-16 bg-blue-50/80 backdrop-blur-sm">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-16 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-            Gói dịch vụ
-          </h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gradient">Quy trình học tập</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {pricingPlans.map((plan, index) => (
-              <Card 
-                key={index} 
-                className={cn(
-                  "bg-gray-800/50 border-gray-700 hover:border-blue-500/50 transition-all duration-300",
-                  plan.highlighted && "border-blue-500 scale-105"
-                )}
-              >
-                <CardHeader>
-                  <CardTitle className="text-2xl font-bold text-white">{plan.title}</CardTitle>
-                  <div className="text-3xl font-bold text-white flex items-baseline">
-                    {plan.price}<span className="text-sm font-normal text-gray-400 ml-1">{plan.period}</span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-4">
-                    {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center text-gray-300">
-                        <Award className="h-4 w-4 mr-2 text-blue-500" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    asChild
-                    className={cn(
-                      "w-full rounded-full",
-                      plan.highlighted ? "bg-blue-600 hover:bg-blue-700" : "border-2 border-blue-600 bg-transparent hover:bg-blue-900/10"
-                    )}
-                  >
-                    <Link to={plan.to}>{plan.buttonText}</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+          <div className="max-w-3xl mx-auto">
+            <div className="relative">
+              <div className="absolute left-0 ml-6 md:ml-8 h-full w-0.5 bg-blue-300"></div>
+              
+              <StepItem 
+                number="1" 
+                title="Nhập văn bản hoặc chọn chủ đề"
+                description="Bắt đầu bằng việc nhập văn bản bạn muốn luyện tập hoặc chọn một chủ đề có sẵn."
+              />
+              
+              <StepItem 
+                number="2" 
+                title="Nghe và làm quen với từ vựng"
+                description="Nghe phát âm chuẩn và làm quen với từng từ vựng, cụm từ trong bài."
+              />
+              
+              <StepItem 
+                number="3" 
+                title="Luyện tập phát âm"
+                description="Luyện tập phát âm từng cụm từ, nhận phản hồi chi tiết về độ chính xác."
+              />
+              
+              <StepItem 
+                number="4" 
+                title="Hoàn thành bài tập"
+                description="Thực hiện các bài tập như điền vào chỗ trống, trả lời câu hỏi để củng cố kiến thức."
+              />
+              
+              <StepItem 
+                number="5" 
+                title="Nói toàn bộ đoạn văn"
+                description="Nói toàn bộ đoạn văn và nhận đánh giá tổng thể về khả năng phát âm của bạn."
+              />
+            </div>
           </div>
         </div>
       </section>
+      
+      {/* Pricing */}
+      <section className="py-16 relative overflow-hidden">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12 text-gradient">Gói dịch vụ</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <PricingCard 
+              title="Miễn phí"
+              price="0"
+              features={[
+                "3 lượt sử dụng miễn phí",
+                "Phân tích phát âm cơ bản",
+                "Truy cập các chủ đề có sẵn"
+              ]}
+              buttonText="Bắt đầu miễn phí"
+              highlighted={false}
+              to="/study"
+            />
+            
+            <PricingCard 
+              title="Tiêu chuẩn"
+              price="99k"
+              period="/tháng"
+              features={[
+                "Không giới hạn lượt sử dụng",
+                "Phân tích phát âm chi tiết",
+                "Tất cả chủ đề IELTS/TOEIC",
+                "Lịch sử luyện tập"
+              ]}
+              buttonText="Đăng ký ngay"
+              highlighted={true}
+              to="/pricing"
+            />
+            
+            <PricingCard 
+              title="Premium"
+              price="199k"
+              period="/tháng"
+              features={[
+                "Tất cả tính năng Tiêu chuẩn",
+                "Tư vấn 1-1 với giáo viên",
+                "Lộ trình học cá nhân hóa",
+                "Ưu tiên cập nhật tính năng mới"
+              ]}
+              buttonText="Nâng cấp"
+              highlighted={false}
+              to="/pricing"
+            />
+          </div>
+        </div>
+
+        {/* Decorative background elements */}
+        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-purple-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob" />
+        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000" />
+      </section>
+      
+      {/* Footer */}
+      <footer className="bg-gray-800 text-white py-10">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-6 md:mb-0">
+              <h3 className="text-2xl font-bold mb-2">Hamaspeak</h3>
+              <p className="text-gray-400">© 2023 Hamaspeak. Mọi quyền được bảo lưu.</p>
+            </div>
+            
+            <div className="flex space-x-6">
+              <a href="#" className="hover:text-blue-400">Điều khoản</a>
+              <a href="#" className="hover:text-blue-400">Chính sách</a>
+              <a href="#" className="hover:text-blue-400">Liên hệ</a>
+              <a href="#" className="hover:text-blue-400">Trợ giúp</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
 
-const features = [
-  {
-    title: "Phân tích phát âm",
-    description: "Công nghệ AI nhận diện và đánh giá khả năng phát âm của bạn, đưa ra phản hồi chi tiết.",
-    icon: <Mic className="w-6 h-6 text-blue-400" />
-  },
-  {
-    title: "Học từ vựng theo chủ đề",
-    description: "Hệ thống học từ vựng được phân loại theo chủ đề, giúp bạn ghi nhớ hiệu quả.",
-    icon: <BookOpen className="w-6 h-6 text-blue-400" />
-  },
-  {
-    title: "Luyện tập toàn diện",
-    description: "8 bước luyện tập từ đơn giản đến phức tạp, giúp nâng cao kỹ năng nói.",
-    icon: <GraduationCap className="w-6 h-6 text-blue-400" />
-  }
-];
+// Feature card component
+const FeatureCard = ({ title, description, icon }) => {
+  return (
+    <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
+      <CardHeader>
+        <div className="bg-blue-100 text-blue-600 w-12 h-12 flex items-center justify-center rounded-full mb-4">
+          {icon}
+        </div>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-gray-600">{description}</p>
+      </CardContent>
+    </Card>
+  );
+};
 
-const pricingPlans = [
-  {
-    title: "Miễn phí",
-    price: "0",
-    features: [
-      "3 lượt sử dụng miễn phí",
-      "Phân tích phát âm cơ bản",
-      "Truy cập các chủ đề có sẵn"
-    ],
-    buttonText: "Bắt đầu miễn phí",
-    highlighted: false,
-    to: "/study"
-  },
-  {
-    title: "Tiêu chuẩn",
-    price: "99k",
-    period: "/tháng",
-    features: [
-      "Không giới hạn lượt sử dụng",
-      "Phân tích phát âm chi tiết",
-      "Tất cả chủ đề IELTS/TOEIC",
-      "Lịch sử luyện tập"
-    ],
-    buttonText: "Đăng ký ngay",
-    highlighted: true,
-    to: "/pricing"
-  },
-  {
-    title: "Premium",
-    price: "199k",
-    period: "/tháng",
-    features: [
-      "Tất cả tính năng Tiêu chuẩn",
-      "Tư vấn 1-1 với giáo viên",
-      "Lộ trình học cá nhân hóa",
-      "Ưu tiên cập nhật tính năng mới"
-    ],
-    buttonText: "Nâng cấp",
-    highlighted: false,
-    to: "/pricing"
-  }
-];
+// Step item component
+const StepItem = ({ number, title, description }) => {
+  return (
+    <div className="relative pl-12 md:pl-16 pb-10">
+      <div className="absolute left-0 w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-lg">
+        {number}
+      </div>
+      <h3 className="text-xl font-bold mb-2">{title}</h3>
+      <p className="text-gray-600">{description}</p>
+    </div>
+  );
+};
+
+// Price card component
+const PriceCard = ({ title, price, period = "", features, buttonText, highlighted, to }) => {
+  return (
+    <Card className={`border ${highlighted ? 'border-blue-500 shadow-lg scale-105' : 'border-gray-200'}`}>
+      <CardHeader className={highlighted ? 'bg-blue-50' : ''}>
+        <CardTitle className="text-xl mb-2">{title}</CardTitle>
+        <div className="text-3xl font-bold flex items-baseline">
+          {price}<span className="text-sm font-normal text-gray-500 ml-1">{period}</span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-2">
+          {features.map((feature, index) => (
+            <li key={index} className="flex items-center">
+              <Award className="h-4 w-4 mr-2 text-blue-500" />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+      <CardFooter>
+        <Button 
+          asChild
+          className={`w-full ${highlighted ? 'bg-blue-600 hover:bg-blue-700' : ''}`} 
+          variant={highlighted ? 'default' : 'outline'}
+        >
+          <Link to={to}>{buttonText}</Link>
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
 
 export default Index;
