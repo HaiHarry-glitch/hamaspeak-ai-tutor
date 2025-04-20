@@ -1,9 +1,17 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { TextRotate } from '@/components/ui/text-rotate';
-import { Mic, BookOpen, GraduationCap } from 'lucide-react';
+import { Mic, BookOpen, GraduationCap, Award } from 'lucide-react';
 import PricingCard from '@/components/pricing/PricingCard';
+import { 
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter
+} from '@/components/ui/card';
 
 const Index = () => {
   return (
