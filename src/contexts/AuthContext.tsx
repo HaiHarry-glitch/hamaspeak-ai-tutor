@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthContextType } from '../types/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -6,18 +5,19 @@ import { useToast } from '@/hooks/use-toast';
 const LOCAL_STORAGE_KEY = 'hamaspeak_auth';
 const SESSION_TRIES_KEY = 'hamaspeak_session_tries';
 const MAX_SESSION_TRIES = 3;
+const DAILY_USAGE_KEY = 'hamaspeak_daily_usage';
+const MAX_FREE_USAGE = 3;
 
-// Create the auth context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionTriesRemaining, setSessionTriesRemaining] = useState(MAX_SESSION_TRIES);
+  const [dailyUsageCount, setDailyUsageCount] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load user from localStorage
     const loadUser = () => {
       const savedUser = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedUser) {
@@ -29,7 +29,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      // Load session tries
       const savedTries = localStorage.getItem(SESSION_TRIES_KEY);
       if (savedTries) {
         try {
@@ -43,23 +42,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSessionTriesRemaining(MAX_SESSION_TRIES);
       }
 
-      setIsLoading(false);
+      const today = new Date().toDateString();
+      const savedUsage = localStorage.getItem(DAILY_USAGE_KEY);
+      
+      if (savedUsage) {
+        try {
+          const { date, count } = JSON.parse(savedUsage);
+          if (date === today) {
+            setDailyUsageCount(count);
+          } else {
+            localStorage.setItem(DAILY_USAGE_KEY, JSON.stringify({ date: today, count: 0 }));
+            setDailyUsageCount(0);
+          }
+        } catch (error) {
+          console.error('Error parsing daily usage:', error);
+          localStorage.removeItem(DAILY_USAGE_KEY);
+        }
+      }
     };
 
     loadUser();
   }, []);
 
   useEffect(() => {
-    // Save session tries to localStorage when it changes
     if (!isLoading) {
       localStorage.setItem(SESSION_TRIES_KEY, sessionTriesRemaining.toString());
     }
   }, [sessionTriesRemaining, isLoading]);
 
+  const incrementDailyUsage = () => {
+    if (!user) {
+      const today = new Date().toDateString();
+      const newCount = dailyUsageCount + 1;
+      localStorage.setItem(DAILY_USAGE_KEY, JSON.stringify({ date: today, count: newCount }));
+      setDailyUsageCount(newCount);
+      return newCount <= MAX_FREE_USAGE;
+    }
+    return true;
+  };
+
   const signUp = async (email: string, password: string, displayName: string) => {
     try {
       setIsLoading(true);
-      // In a real app, we'd call an API here
       const now = new Date().toISOString();
       const newUser: User = {
         id: Math.random().toString(36).substring(2, 15),
@@ -95,9 +119,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      // In a real app, we'd validate credentials against a backend
-      
-      // Mock authentication - in a real app this would be an API call
       const now = new Date().toISOString();
       const mockUser: User = {
         id: Math.random().toString(36).substring(2, 15),
@@ -133,7 +154,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInAnonymously = async () => {
     try {
       setIsLoading(true);
-      // Create anonymous user
       const now = new Date().toISOString();
       const anonUser: User = {
         id: Math.random().toString(36).substring(2, 15),
@@ -214,8 +234,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const resetPassword = async (email: string) => {
     try {
       setIsLoading(true);
-      // In a real app, we'd call an API here
-      
       toast({
         title: 'Đặt lại mật khẩu',
         description: `Chúng tôi đã gửi email đặt lại mật khẩu đến ${email}`,
@@ -234,8 +252,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const useSessionTry = () => {
-    if (user) return sessionTriesRemaining; // If user is logged in, no session tries are consumed
-    
+    if (user) return sessionTriesRemaining;
     const newTriesRemaining = Math.max(0, sessionTriesRemaining - 1);
     setSessionTriesRemaining(newTriesRemaining);
     return newTriesRemaining;
@@ -245,7 +262,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     isLoading,
     isAuthenticated: !!user,
-    sessionTriesRemaining,
+    dailyUsageCount,
+    remainingUsage: user ? Infinity : Math.max(0, MAX_FREE_USAGE - dailyUsageCount),
+    incrementDailyUsage,
     signUp,
     signIn,
     signInAnonymously,

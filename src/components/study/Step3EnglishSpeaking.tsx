@@ -3,7 +3,7 @@ import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Volume2, Mic, ArrowRight, Loader2, Info } from 'lucide-react';
-import { speakText, startSpeechRecognition, stopSpeechRecognition, getIpaTranscription } from '@/utils/speechUtils';
+import { speakText, getIpaTranscription } from '@/utils/speechUtils';
 import { Progress } from '@/components/ui/progress';
 import PronunciationFeedback from './PronunciationFeedback';
 import WordPronunciationPractice from './WordPronunciationPractice';
@@ -60,120 +60,55 @@ const Step3EnglishSpeaking: React.FC<PronunciationComponentProps> = ({
     setScoreDetails(null);
     setShowFeedback(false);
     
-    toast({
-      title: 'Đang lắng nghe...',
-      description: 'Hãy đọc theo từ/cụm từ được hiển thị. Nói to và rõ ràng.',
-      duration: 3000,
-    });
+    let recognition: any;
     
     try {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (permissionError) {
-        console.error('Microphone permission denied:', permissionError);
-        toast({
-          title: 'Không có quyền truy cập microphone',
-          description: 'Vui lòng cấp quyền truy cập microphone để sử dụng tính năng này.',
-          variant: 'destructive'
-        });
-        setIsListening(false);
-        return;
-      }
+      const { webkitSpeechRecognition } = window as any;
+      recognition = new webkitSpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = true;
       
-      const result = await startSpeechRecognition('en-US');
-      console.log('Speech recognition result:', result);
-      setUserTranscript(result.transcript);
-      
-      if (onAnalyzePronunciation) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+      recognition.onresult = async (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setUserTranscript(transcript);
         
-        toast({
-          title: 'Đang phân tích phát âm...',
-          description: 'Vui lòng đợi trong giây lát.',
-          duration: 2000,
-        });
-        
-        const scores = await onAnalyzePronunciation(currentCollocation.english);
-        const pronunciationScores: ScoreDetails = {
-          overallScore: scores.overallScore.pronScore,
-          accuracyScore: scores.overallScore.accuracyScore,
-          fluencyScore: scores.overallScore.fluencyScore,
-          completenessScore: scores.overallScore.completenessScore,
-          pronScore: scores.overallScore.pronScore,
-          intonationScore: Math.round(scores.overallScore.fluencyScore * 0.9 + Math.random() * 10),
-          stressScore: Math.round(scores.overallScore.accuracyScore * 0.85 + Math.random() * 15),
-          rhythmScore: Math.round((scores.overallScore.fluencyScore + scores.overallScore.accuracyScore) / 2)
-        };
-        setScoreDetails(pronunciationScores);
-        
-        if (scores.overallScore.pronScore < 90) {
-          const errorWords = currentCollocation.english.split(' ')
-            .filter(() => Math.random() > 0.7)
-            .slice(0, 2);
-          
-          const errorWordsWithIpa = await Promise.all(
-            errorWords.map(async (word) => ({
-              word,
-              ipa: await getIpaTranscription(word)
-            }))
-          );
-          
-          setWordErrors(errorWordsWithIpa);
-        } else {
-          setWordErrors([]);
+        // Analyze pronunciation in real-time
+        if (onAnalyzePronunciation) {
+          const scores = await onAnalyzePronunciation(currentCollocation.english);
+          const pronunciationScores: ScoreDetails = {
+            overallScore: scores.overallScore.pronScore,
+            accuracyScore: scores.overallScore.accuracyScore,
+            fluencyScore: scores.overallScore.fluencyScore,
+            completenessScore: scores.overallScore.completenessScore,
+            pronScore: scores.overallScore.pronScore,
+            intonationScore: Math.round(scores.overallScore.fluencyScore * 0.9 + Math.random() * 10),
+            stressScore: Math.round(scores.overallScore.accuracyScore * 0.85 + Math.random() * 15),
+            rhythmScore: Math.round((scores.overallScore.fluencyScore + scores.overallScore.accuracyScore) / 2)
+          };
+          setScoreDetails(pronunciationScores);
         }
-      } else {
-        const scores = {
-          text: result.transcript,
-          overallScore: {
-            accuracyScore: Math.round(Math.random() * 30 + 65),
-            fluencyScore: Math.round(Math.random() * 30 + 65),
-            completenessScore: Math.round(Math.random() * 30 + 65),
-            pronScore: Math.round(Math.random() * 30 + 65)
-          },
-          words: [],
-          json: '{}'
-        };
-        const pronunciationScores: ScoreDetails = {
-          overallScore: scores.overallScore.pronScore,
-          accuracyScore: scores.overallScore.accuracyScore,
-          fluencyScore: scores.overallScore.fluencyScore,
-          completenessScore: scores.overallScore.completenessScore,
-          pronScore: scores.overallScore.pronScore,
-          intonationScore: Math.round(scores.overallScore.fluencyScore * 0.9 + Math.random() * 10),
-          stressScore: Math.round(scores.overallScore.accuracyScore * 0.85 + Math.random() * 15),
-          rhythmScore: Math.round((scores.overallScore.fluencyScore + scores.overallScore.accuracyScore) / 2)
-        };
-        setScoreDetails(pronunciationScores);
-      }
+      };
       
-      setAttemptsLeft(prev => prev - 1);
+      recognition.start();
     } catch (error) {
       console.error('Speech recognition error:', error);
-      
-      if (error.message && error.message.includes('no speech')) {
-        toast({
-          title: 'Không phát hiện giọng nói',
-          description: 'Vui lòng nói to và rõ ràng hơn để chúng tôi có thể nghe được bạn.',
-          variant: 'destructive'
-        });
-      } else if (error.message && error.message.includes('network')) {
-        toast({
-          title: 'Lỗi kết nối mạng',
-          description: 'Vui lòng kiểm tra kết nối internet của bạn và thử lại.',
-          variant: 'destructive'
-        });
-      } else {
-        toast({
-          title: 'Lỗi nhận diện giọng nói',
-          description: 'Không thể nhận diện giọng nói. Vui lòng đảm bảo microphone đang hoạt động và thử lại.',
-          variant: 'destructive'
-        });
-      }
-      
-      setUserTranscript('');
+      toast({
+        title: 'Lỗi nhận diện giọng nói',
+        description: 'Không thể nhận diện giọng nói. Vui lòng đảm bảo microphone đang hoạt động và thử lại.',
+        variant: 'destructive'
+      });
     } finally {
       setIsListening(false);
+      if (recognition) {
+        setTimeout(() => {
+          try {
+            recognition.stop();
+          } catch (e) {
+            // Ignore errors when stopping
+          }
+        }, 5000); // Stop after 5 seconds of speech
+      }
     }
   };
 

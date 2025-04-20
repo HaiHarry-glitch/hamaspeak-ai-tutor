@@ -24,17 +24,19 @@ import SpeechService, { PronunciationResult } from '@/services/speechService';
 import { PronunciationComponentProps } from '@/components/study/studyComponentProps';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { LogIn } from 'lucide-react';
 
 const StudyContent = () => {
   const { 
     currentStep, 
     isAnalyzing, 
-    selectedVoice, 
-    selectedTopicGroup, 
+    selectedVoice,
     isAuthModalOpen, 
     setIsAuthModalOpen
   } = useStudy();
-  const { isAuthenticated } = useAuth();
+  
+  const { isAuthenticated, dailyUsageCount, remainingUsage, incrementDailyUsage } = useAuth();
   const [pronunciationHistory, setPronunciationHistory] = useState<PronunciationResult[]>([]);
   const [sdkLoaded, setSdkLoaded] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -124,13 +126,30 @@ const StudyContent = () => {
           Luyện nói tiếng Anh cùng Hamaspeak
         </h1>
         
-        {!isAuthenticated && currentStep === 0 && (
+        {!isAuthenticated && (
           <div className="max-w-3xl mx-auto mb-6">
-            <SessionTriesIndicator />
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Chế độ dùng thử</h4>
+                  <p className="text-sm text-blue-700">
+                    {remainingUsage > 0 
+                      ? `Bạn còn ${remainingUsage} lượt dùng thử hôm nay`
+                      : 'Bạn đã hết lượt dùng thử hôm nay, vui lòng đăng nhập để tiếp tục'}
+                  </p>
+                </div>
+                
+                <Button 
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Đăng nhập
+                </Button>
+              </div>
+            </div>
           </div>
         )}
-        
-        {isAnalyzing && <AnalyzingProgress isAnalyzing={isAnalyzing} />}
         
         {currentStep > 0 && !isAnalyzing && (
           <div className="max-w-4xl mx-auto mb-8">
