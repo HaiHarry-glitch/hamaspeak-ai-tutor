@@ -58,52 +58,56 @@ export const translateText = async (text: string, targetLanguage: string = 'vi')
 };
 
 // Speech recognition
-export const startSpeechRecognition = async (language: string = 'en-US'): Promise<{ transcript: string }> => {
+export const startSpeechRecognition = (
+  language: string = 'en-US'
+): Promise<{ transcript: string; confidence: number }> => {
   return new Promise((resolve, reject) => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      reject(new Error('Speech recognition not supported in this browser'));
-      return;
-    }
-
-    // @ts-ignore - Browser API
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    
-    recognition.lang = language;
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      resolve({ transcript });
-    };
-    
-    recognition.onerror = (event: any) => {
-      reject(new Error(`Speech recognition error: ${event.error}`));
-    };
-    
-    recognition.start();
-    
-    // Timeout after 20 seconds instead of 10 to give users more time
-    setTimeout(() => {
-      try {
-        recognition.stop();
-      } catch (e) {
-        // Ignore errors when stopping
+    try {
+      const { webkitSpeechRecognition } = window as any;
+      
+      if (!webkitSpeechRecognition) {
+        throw new Error('Speech recognition not supported in this browser');
       }
-    }, 20000);
+      
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = language;
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        const confidence = event.results[0][0].confidence;
+        resolve({ transcript, confidence });
+      };
+      
+      recognition.onerror = (event: any) => {
+        reject(new Error(`Speech recognition error: ${event.error}`));
+      };
+      
+      recognition.onend = () => {
+        // If no result by the time it ends, consider it a failure
+        // This will be called if no speech is detected
+        reject(new Error('No speech detected'));
+      };
+      
+      recognition.start();
+    } catch (error) {
+      reject(error);
+    }
   });
 };
 
-export const stopSpeechRecognition = (): void => {
-  // @ts-ignore - Browser API
-  if (('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window)) {
-    try {
-      // This is mostly a placeholder since recognition should stop automatically
-      // When used with this API, the actual stopping happens elsewhere
-    } catch (e) {
-      console.error('Error stopping speech recognition:', e);
+export const stopSpeechRecognition = () => {
+  try {
+    const { webkitSpeechRecognition } = window as any;
+    
+    if (webkitSpeechRecognition) {
+      // There's no direct way to stop the global recognition instance
+      // If needed, you would need to maintain a reference to your recognition instance
+      console.log('Speech recognition stopped');
     }
+  } catch (error) {
+    console.error('Error stopping speech recognition:', error);
   }
 };
 

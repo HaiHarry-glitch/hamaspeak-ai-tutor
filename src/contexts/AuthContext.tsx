@@ -1,6 +1,9 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthContextType } from '../types/auth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Session } from '@supabase/supabase-js';
 
 const LOCAL_STORAGE_KEY = 'hamaspeak_auth';
 const SESSION_TRIES_KEY = 'hamaspeak_session_tries';
@@ -12,56 +15,103 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionTriesRemaining, setSessionTriesRemaining] = useState(MAX_SESSION_TRIES);
   const [dailyUsageCount, setDailyUsageCount] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
-    const loadUser = () => {
-      const savedUser = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (savedUser) {
-        try {
-          setUser(JSON.parse(savedUser));
-        } catch (error) {
-          console.error('Error parsing user data:', error);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session) {
+          const supabaseUser = session.user;
+          
+          // Convert Supabase user to our app's user format
+          const appUser: User = {
+            id: supabaseUser.id,
+            email: supabaseUser.email || undefined,
+            displayName: supabaseUser.user_metadata.displayName || supabaseUser.email?.split('@')[0] || 'User',
+            photoURL: supabaseUser.user_metadata.avatar_url,
+            isAnonymous: false,
+            createdAt: supabaseUser.created_at,
+            lastLoginAt: new Date().toISOString(),
+            speechCredits: 100,
+            membershipType: 'free'
+          };
+          
+          setSession(session);
+          setUser(appUser);
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appUser));
+        } else {
+          setUser(null);
+          setSession(null);
           localStorage.removeItem(LOCAL_STORAGE_KEY);
         }
       }
+    );
 
-      const savedTries = localStorage.getItem(SESSION_TRIES_KEY);
-      if (savedTries) {
-        try {
-          setSessionTriesRemaining(parseInt(savedTries, 10));
-        } catch (error) {
-          console.error('Error parsing session tries:', error);
-          localStorage.removeItem(SESSION_TRIES_KEY);
-          setSessionTriesRemaining(MAX_SESSION_TRIES);
-        }
-      } else {
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      if (data.session?.user) {
+        const supabaseUser = data.session.user;
+        
+        const appUser: User = {
+          id: supabaseUser.id,
+          email: supabaseUser.email || undefined,
+          displayName: supabaseUser.user_metadata.displayName || supabaseUser.email?.split('@')[0] || 'User',
+          photoURL: supabaseUser.user_metadata.avatar_url,
+          isAnonymous: false,
+          createdAt: supabaseUser.created_at,
+          lastLoginAt: new Date().toISOString(),
+          speechCredits: 100,
+          membershipType: 'free'
+        };
+        
+        setUser(appUser);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appUser));
+      }
+      setIsLoading(false);
+    });
+
+    // Load session tries
+    const savedTries = localStorage.getItem(SESSION_TRIES_KEY);
+    if (savedTries) {
+      try {
+        setSessionTriesRemaining(parseInt(savedTries, 10));
+      } catch (error) {
+        console.error('Error parsing session tries:', error);
+        localStorage.removeItem(SESSION_TRIES_KEY);
         setSessionTriesRemaining(MAX_SESSION_TRIES);
       }
+    } else {
+      setSessionTriesRemaining(MAX_SESSION_TRIES);
+    }
 
-      const today = new Date().toDateString();
-      const savedUsage = localStorage.getItem(DAILY_USAGE_KEY);
-      
-      if (savedUsage) {
-        try {
-          const { date, count } = JSON.parse(savedUsage);
-          if (date === today) {
-            setDailyUsageCount(count);
-          } else {
-            localStorage.setItem(DAILY_USAGE_KEY, JSON.stringify({ date: today, count: 0 }));
-            setDailyUsageCount(0);
-          }
-        } catch (error) {
-          console.error('Error parsing daily usage:', error);
-          localStorage.removeItem(DAILY_USAGE_KEY);
+    // Load daily usage
+    const today = new Date().toDateString();
+    const savedUsage = localStorage.getItem(DAILY_USAGE_KEY);
+    
+    if (savedUsage) {
+      try {
+        const { date, count } = JSON.parse(savedUsage);
+        if (date === today) {
+          setDailyUsageCount(count);
+        } else {
+          localStorage.setItem(DAILY_USAGE_KEY, JSON.stringify({ date: today, count: 0 }));
+          setDailyUsageCount(0);
         }
+      } catch (error) {
+        console.error('Error parsing daily usage:', error);
+        localStorage.removeItem(DAILY_USAGE_KEY);
       }
-    };
+    }
 
-    loadUser();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -84,25 +134,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, password: string, displayName: string) => {
     try {
       setIsLoading(true);
-      const now = new Date().toISOString();
-      const newUser: User = {
-        id: Math.random().toString(36).substring(2, 15),
-        email,
-        displayName,
-        isAnonymous: false,
-        createdAt: now,
-        lastLoginAt: now,
-        speechCredits: 100,
-        membershipType: 'free'
-      };
       
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUser));
-      setUser(newUser);
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            displayName,
+          }
+        }
+      });
+      
+      if (error) throw error;
       
       toast({
         title: 'Đăng ký thành công!',
-        description: 'Chào mừng bạn đến với Hamaspeak.',
+        description: 'Vui lòng kiểm tra email của bạn để xác nhận tài khoản.',
       });
+
     } catch (error) {
       console.error('Error during sign up:', error);
       toast({
@@ -119,25 +168,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const now = new Date().toISOString();
-      const mockUser: User = {
-        id: Math.random().toString(36).substring(2, 15),
-        email,
-        displayName: email.split('@')[0],
-        isAnonymous: false,
-        createdAt: now,
-        lastLoginAt: now,
-        speechCredits: 100,
-        membershipType: 'free'
-      };
       
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(mockUser));
-      setUser(mockUser);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw error;
       
       toast({
         title: 'Đăng nhập thành công!',
-        description: `Chào mừng trở lại, ${mockUser.displayName}!`,
+        description: `Chào mừng trở lại!`,
       });
+      
     } catch (error) {
       console.error('Error during sign in:', error);
       toast({
@@ -188,8 +231,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     try {
       setIsLoading(true);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       setUser(null);
+      setSession(null);
       
       toast({
         title: 'Đăng xuất thành công',
@@ -211,6 +259,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateProfile = async (profile: Partial<User>) => {
     try {
       if (!user) throw new Error('No user logged in');
+      
+      // Update Supabase user metadata if authenticated with Supabase
+      if (session) {
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            displayName: profile.displayName,
+            avatar_url: profile.photoURL
+          }
+        });
+        
+        if (error) throw error;
+      }
       
       const updatedUser = { ...user, ...profile };
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedUser));
@@ -234,6 +294,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const resetPassword = async (email: string) => {
     try {
       setIsLoading(true);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      
+      if (error) throw error;
+      
       toast({
         title: 'Đặt lại mật khẩu',
         description: `Chúng tôi đã gửi email đặt lại mật khẩu đến ${email}`,
