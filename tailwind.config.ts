@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -179,7 +178,27 @@ export default {
 				'bounce-slow': {
 					'0%, 100%': { transform: 'translateY(0)' },
 					'50%': { transform: 'translateY(-5px)' }
-				}
+				},
+				'rotate-words': {
+					'0%': { transform: 'translateY(0%)' },
+					'33%': { transform: 'translateY(-33.33%)' },
+					'66%': { transform: 'translateY(-66.66%)' },
+					'100%': { transform: 'translateY(-99.99%)' },
+				},
+				'blob': {
+					'0%': {
+						transform: 'translate(0px, 0px) scale(1)',
+					},
+					'33%': {
+						transform: 'translate(30px, -50px) scale(1.1)',
+					},
+					'66%': {
+						transform: 'translate(-20px, 20px) scale(0.9)',
+					},
+					'100%': {
+						transform: 'translate(0px, 0px) scale(1)',
+					},
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -199,13 +218,23 @@ export default {
 				'pulse-slow': 'pulse-slow 3s ease-in-out infinite',
 				'ping-slow': 'ping-slow 3s ease-in-out infinite',
 				'netflix-card-hover': 'netflix-card-hover 0.3s ease-in-out forwards',
-				'bounce-slow': 'bounce-slow 3s ease-in-out infinite'
+				'bounce-slow': 'bounce-slow 3s ease-in-out infinite',
+				'rotate-words': 'rotate-words 6s ease-in-out infinite',
+				'blob': 'blob 7s infinite',
 			},
 			backgroundImage: {
 				'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
 				'hero-gradient': 'linear-gradient(to right bottom, #3B82F6, #8B5CF6, #14B8A6)',
 				'netflix-card': 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.8) 100%)'
-			}
+			},
+			utilities: {
+				'.animation-delay-2000': {
+					'animation-delay': '2s',
+				},
+				'.animation-delay-4000': {
+					'animation-delay': '4s',
+				},
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],

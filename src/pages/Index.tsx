@@ -1,22 +1,30 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mic, BookOpen, GraduationCap, BarChart, Award } from 'lucide-react';
+import { TextRotate } from '@/components/ui/text-rotate';
+import { Mic, BookOpen, GraduationCap } from 'lucide-react';
+import PricingCard from '@/components/pricing/PricingCard';
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Hero Section */}
-      <section className="pt-20 pb-32 px-4">
+      <section className="relative pt-20 pb-32 px-4 overflow-hidden">
         <div className="container mx-auto text-center max-w-4xl">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 text-gray-900">
             Hamaspeak
           </h1>
-          <p className="text-xl md:text-2xl text-gray-700 mb-10">
-            Nền tảng học tiếng Anh thông minh với công nghệ AI nhận diện phát âm
-          </p>
+          <div className="text-xl md:text-2xl text-gray-700 mb-10 space-y-2">
+            <p>Nền tảng học tiếng Anh thông minh với</p>
+            <TextRotate 
+              words={[
+                "công nghệ AI nhận diện phát âm",
+                "phân tích phát âm chi tiết",
+                "luyện tập toàn diện"
+              ]} 
+              className="font-semibold"
+            />
+          </div>
           
           <div className="space-y-4 md:space-y-0 md:space-x-4 flex flex-col md:flex-row justify-center">
             <Button 
@@ -40,12 +48,19 @@ const Index = () => {
             </Button>
           </div>
         </div>
+
+        {/* Decorative background elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob" />
+          <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000" />
+          <div className="absolute bottom-1/4 left-1/3 w-64 h-64 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000" />
+        </div>
       </section>
       
       {/* Features */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-white/80 backdrop-blur-sm">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Tính năng nổi bật</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gradient">Tính năng nổi bật</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <FeatureCard 
@@ -70,9 +85,9 @@ const Index = () => {
       </section>
       
       {/* How it works */}
-      <section className="py-16 bg-blue-50">
+      <section className="py-16 bg-blue-50/80 backdrop-blur-sm">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Quy trình học tập</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gradient">Quy trình học tập</h2>
           
           <div className="max-w-3xl mx-auto">
             <div className="relative">
@@ -113,12 +128,12 @@ const Index = () => {
       </section>
       
       {/* Pricing */}
-      <section className="py-16">
+      <section className="py-16 relative overflow-hidden">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Gói dịch vụ</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 text-gradient">Gói dịch vụ</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <PriceCard 
+            <PricingCard 
               title="Miễn phí"
               price="0"
               features={[
@@ -131,7 +146,7 @@ const Index = () => {
               to="/study"
             />
             
-            <PriceCard 
+            <PricingCard 
               title="Tiêu chuẩn"
               price="99k"
               period="/tháng"
@@ -146,7 +161,7 @@ const Index = () => {
               to="/pricing"
             />
             
-            <PriceCard 
+            <PricingCard 
               title="Premium"
               price="199k"
               period="/tháng"
@@ -162,6 +177,10 @@ const Index = () => {
             />
           </div>
         </div>
+
+        {/* Decorative background elements */}
+        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-purple-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob" />
+        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000" />
       </section>
       
       {/* Footer */}
