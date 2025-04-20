@@ -22,12 +22,12 @@ const Step1Listening = () => {
   const currentCollocation = collocations[currentCollocationIndex];
 
   // Find the best context phrase for the current collocation
-  const findContextPhrase = (collocation: string) => {
+  const findContextPhrase = (collocation: {english: string, vietnamese: string}) => {
     if (!analysisResult?.phrases?.length) return null;
     
-    // Find all phrases containing this collocation
+    // Find all phrases containing this collocation's English text
     const matchingPhrases = analysisResult.phrases.filter(phrase => 
-      phrase.english.toLowerCase().includes(collocation.toLowerCase())
+      phrase.english.toLowerCase().includes(collocation.english.toLowerCase())
     );
     
     if (!matchingPhrases.length) return null;
@@ -40,32 +40,24 @@ const Step1Listening = () => {
   const contextPhrase = currentCollocation ? findContextPhrase(currentCollocation) : null;
 
   // Highlight collocation in context phrase
-  const highlightCollocation = (text: string, collocation: string) => {
+  const highlightCollocation = (text: string, collocation: {english: string, vietnamese: string}) => {
     if (!text || !collocation) return text;
     
     // Case insensitive replace with span
-    const regex = new RegExp(`(${collocation})`, 'gi');
+    const regex = new RegExp(`(${collocation.english})`, 'gi');
     return text.replace(
       regex, 
       '<span class="bg-hamaspeak-purple/20 text-hamaspeak-purple font-bold px-1 rounded">$1</span>'
     );
   };
 
-  // Translate just the collocation
-  const translateCollocation = async (collocation: string) => {
-    if (!collocation) return;
+  // Set collocation translation from the object
+  const setCurrentCollocationTranslation = () => {
+    if (!currentCollocation) return;
     
-    setIsTranslating(true);
-    try {
-      const translation = await translateText(collocation);
-      setCollocationTranslation(translation);
-      setShowTranslation(true);
-    } catch (error) {
-      console.error('Translation error:', error);
-      setCollocationTranslation('Không thể dịch');
-    } finally {
-      setIsTranslating(false);
-    }
+    // Use the Vietnamese translation from the collocation object
+    setCollocationTranslation(currentCollocation.vietnamese);
+    setShowTranslation(true);
   };
 
   useEffect(() => {
@@ -77,11 +69,11 @@ const Step1Listening = () => {
     loadVoices();
   }, []);
 
-  // When collocation changes, automatically load translation
+  // When collocation changes, automatically set its translation
   useEffect(() => {
     setCollocationTranslation('');
     if (currentCollocation) {
-      translateCollocation(currentCollocation);
+      setCurrentCollocationTranslation();
     }
   }, [currentCollocationIndex, currentCollocation]);
 
@@ -91,7 +83,7 @@ const Step1Listening = () => {
     setIsSpeaking(true);
     try {
       // Always speak just the collocation, not the context
-      await speakText(currentCollocation, selectedVoice);
+      await speakText(currentCollocation.english, selectedVoice);
     } catch (error) {
       console.error('Speech error:', error);
     } finally {
@@ -151,7 +143,7 @@ const Step1Listening = () => {
           
           {/* Display the collocation prominently */}
           <h3 className="text-xl font-medium text-hamaspeak-purple mb-2 animate-pulse-glow">
-            {currentCollocation}
+            {currentCollocation?.english}
           </h3>
           
           {/* Display context if available */}

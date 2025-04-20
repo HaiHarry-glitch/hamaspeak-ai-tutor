@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { StudyProvider, useStudy } from '@/contexts/StudyContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -26,22 +25,6 @@ import { PronunciationComponentProps } from '@/components/study/studyComponentPr
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-// Add script loading function
-const loadScript = (src: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve();
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = src;
-    script.onload = () => resolve();
-    script.onerror = (e) => reject(new Error(`Failed to load script: ${src}`));
-    document.head.appendChild(script);
-  });
-};
-
 const StudyContent = () => {
   const { 
     currentStep, 
@@ -53,30 +36,37 @@ const StudyContent = () => {
   } = useStudy();
   const { isAuthenticated } = useAuth();
   const [pronunciationHistory, setPronunciationHistory] = useState<PronunciationResult[]>([]);
-  const [sdkLoaded, setSdkLoaded] = useState(false);
+  const [sdkLoaded, setSdkLoaded] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  
-  // Load the Microsoft Speech SDK
-  useEffect(() => {
-    const loadSpeechSdk = async () => {
-      try {
-        await loadScript("https://aka.ms/csspeech/jsbrowserpackageraw");
-        setSdkLoaded(true);
-        console.log('Microsoft Speech SDK loaded successfully');
-      } catch (error) {
-        console.error('Failed to load Microsoft Speech SDK:', error);
-        setLoadError('Failed to load Microsoft Speech SDK. Pronunciation analysis may not work correctly.');
-        toast.error('Failed to load pronunciation service. Some features may be limited.');
-      }
-    };
-    
-    loadSpeechSdk();
-  }, []);
   
   // Explicitly type the pronunciation props
   const handleAnalyzePronunciation: PronunciationComponentProps['onAnalyzePronunciation'] = async (text) => {
     try {
-      const result = await SpeechService.assessPronunciationFromMicrophone(text);
+      // Add a check for microphone permissions
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (permissionError) {
+        console.error('Microphone permission denied:', permissionError);
+        toast.error('Vui lòng cấp quyền truy cập microphone để phân tích phát âm.');
+        throw new Error('Microphone permission denied');
+      }
+
+      console.log('Starting pronunciation assessment for:', text);
+      
+      // Thêm timeout dài hơn cho API call
+      const timeoutPromise = new Promise<PronunciationResult>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Timeout: Phân tích phát âm mất quá nhiều thời gian'));
+        }, 30000); // 30 giây timeout
+      });
+      
+      // Gọi service với khả năng timeout
+      const result = await Promise.race([
+        SpeechService.assessPronunciationFromMicrophone(text),
+        timeoutPromise
+      ]);
+      
+      console.log('Pronunciation assessment result:', result);
       
       // Add to history
       setPronunciationHistory(prev => [...prev, result]);
@@ -84,7 +74,20 @@ const StudyContent = () => {
       return result;
     } catch (error) {
       console.error('Speech service error:', error);
-      toast.error('Lỗi dịch vụ phân tích phát âm. Đang sử dụng dữ liệu mẫu.');
+      
+      // Provide more specific error messages based on the error
+      if (error.message && error.message.includes('Speech was not recognized')) {
+        console.warn('Speech not recognized error:', error.message);
+        toast.error('Không thể nhận diện giọng nói. Vui lòng nói rõ hơn hoặc kiểm tra microphone.');
+      } else if (error.message && error.message.includes('Timeout')) {
+        toast.error('Phân tích phát âm mất quá nhiều thời gian. Vui lòng thử lại sau.');
+      } else if (error.message && error.message.includes('network')) {
+        toast.error('Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet của bạn.');
+      } else if (error.message && error.message.includes('Microphone')) {
+        toast.error('Không thể truy cập microphone. Vui lòng kiểm tra thiết bị của bạn.');
+      } else {
+        toast.error('Lỗi dịch vụ phân tích phát âm. Đang sử dụng dữ liệu mẫu.');
+      }
       
       // Return a simplified mock result when there's an error
       return {

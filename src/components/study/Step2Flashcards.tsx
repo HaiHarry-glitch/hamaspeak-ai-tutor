@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useStudy } from '@/contexts/StudyContext';
 import { Button } from '@/components/ui/button';
@@ -12,12 +11,10 @@ const Step2Flashcards = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [markedCards, setMarkedCards] = useState<Record<string, boolean>>({});
-  const [collocationTranslations, setCollocationTranslations] = useState<Record<string, string>>({});
-  const [isTranslating, setIsTranslating] = useState(false);
 
   const { currentIndex, isFlipped } = flashcardState;
   
-  // Use collocations instead of phrases
+  // Use collocations list
   const collocations = analysisResult?.collocations || [];
   const currentCollocation = collocations[currentIndex];
 
@@ -27,35 +24,6 @@ const Step2Flashcards = () => {
       handleSpeak();
     }
   }, [isFlipped, currentIndex]);
-
-  // Get translation for current collocation if not already cached
-  useEffect(() => {
-    const getTranslation = async () => {
-      if (!currentCollocation) return;
-      
-      // Skip if we already have a translation
-      if (collocationTranslations[currentCollocation]) return;
-      
-      setIsTranslating(true);
-      try {
-        const translation = await translateText(currentCollocation);
-        setCollocationTranslations(prev => ({
-          ...prev,
-          [currentCollocation]: translation
-        }));
-      } catch (error) {
-        console.error('Translation error:', error);
-        setCollocationTranslations(prev => ({
-          ...prev,
-          [currentCollocation]: 'Không thể dịch'
-        }));
-      } finally {
-        setIsTranslating(false);
-      }
-    };
-    
-    getTranslation();
-  }, [currentIndex, currentCollocation]);
 
   const toggleFlip = () => {
     // Fix: Explicitly provide the correct type for flashcard state
@@ -96,7 +64,8 @@ const Step2Flashcards = () => {
     
     setIsSpeaking(true);
     try {
-      await speakText(currentCollocation, selectedVoice);
+      // Use the english property of the collocation
+      await speakText(currentCollocation.english, selectedVoice);
     } catch (error) {
       console.error('Speech error:', error);
     } finally {
@@ -106,10 +75,11 @@ const Step2Flashcards = () => {
 
   const toggleMarked = () => {
     if (!currentCollocation) return;
-    // Use the collocation string as the key for marking
+    // Use the english property as the key for marking
+    const key = currentCollocation.english;
     setMarkedCards(prev => ({
       ...prev,
-      [currentCollocation]: !prev[currentCollocation]
+      [key]: !prev[key]
     }));
   };
 
@@ -125,8 +95,8 @@ const Step2Flashcards = () => {
   }
 
   const progress = ((currentIndex + 1) / collocations.length) * 100;
-  const isCardMarked = markedCards[currentCollocation] || false;
-  const currentTranslation = collocationTranslations[currentCollocation] || '';
+  // Use the english property as the key for markedCards
+  const isCardMarked = markedCards[currentCollocation.english] || false;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -191,7 +161,7 @@ const Step2Flashcards = () => {
                       animate={{ scale: 1 }}
                       transition={{ delay: 0.2, duration: 0.3 }}
                     >
-                      {currentCollocation}
+                      {currentCollocation.english}
                     </motion.h3>
                     
                     <motion.div 
@@ -239,48 +209,34 @@ const Step2Flashcards = () => {
                     
                     <div className="text-xs uppercase tracking-wider text-gray-400 mb-1">NGHĨA TIẾNG VIỆT</div>
                     
-                    {isTranslating ? (
-                      <div className="flex justify-center items-center h-20">
-                        <Loader2 className="h-6 w-6 animate-spin text-hamaspeak-purple mr-2" />
-                        <p className="text-gray-500">Đang dịch...</p>
-                      </div>
-                    ) : (
-                      <motion.h3 
-                        className="text-2xl md:text-3xl font-bold text-hamaspeak-purple text-center relative"
-                        initial={{ scale: 0.9 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 0.2, duration: 0.3 }}
-                      >
-                        {currentTranslation}
-                        
-                        {/* Show hint button for Vietnamese side */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute -right-8 -top-1 h-8 w-8 rounded-full p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowHint(!showHint);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 text-gray-400" />
-                        </Button>
-                      </motion.h3>
-                    )}
+                    <motion.h3 
+                      className="text-2xl md:text-3xl font-bold text-hamaspeak-purple text-center relative"
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.2, duration: 0.3 }}
+                    >
+                      {currentCollocation.vietnamese}
+                    </motion.h3>
                     
-                    {/* Hint section */}
-                    <AnimatePresence>
-                      {showHint && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="mt-4 text-gray-500 text-sm bg-gray-50 rounded-md p-2"
-                        >
-                          <div className="font-medium text-gray-600">{currentCollocation}</div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <motion.div 
+                      className="mt-6 flex justify-center gap-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3 }}
+                    >
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-gray-400 hover:text-hamaspeak-purple hover:bg-hamaspeak-purple/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMarked();
+                        }}
+                      >
+                        <Check className="mr-1 h-4 w-4" />
+                        {isCardMarked ? 'Đã ghi nhớ' : 'Đánh dấu đã học'}
+                      </Button>
+                    </motion.div>
                     
                     <div className="absolute bottom-4 left-0 right-0 text-center text-gray-400 text-sm">
                       <span className="flex items-center justify-center gap-1">
@@ -294,84 +250,36 @@ const Step2Flashcards = () => {
           </div>
         </div>
 
-        {/* Control buttons with hover effects */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Button 
-            onClick={handlePrevious}
-            disabled={currentIndex === 0}
-            variant="outline"
-            className="flex items-center justify-center gap-2 transition-all hover:border-hamaspeak-blue/50"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="sm:inline hidden">Quay lại</span>
-          </Button>
-          
-          <Button 
-            onClick={toggleMarked} 
-            variant={isCardMarked ? "default" : "outline"}
-            className={`flex items-center justify-center gap-2 transition-all ${
-              isCardMarked 
-                ? 'bg-green-500 hover:bg-green-600 text-white' 
-                : 'hover:border-green-500/50'
-            }`}
-          >
-            <Check className="h-4 w-4" />
-            <span className="sm:inline hidden">{isCardMarked ? 'Đã thuộc' : 'Đánh dấu'}</span>
-          </Button>
-          
-          <Button 
-            onClick={handleSpeak}
-            disabled={isSpeaking}
-            variant="outline"
-            className="flex items-center justify-center gap-2 transition-all hover:border-hamaspeak-purple/50"
-          >
-            <Volume2 className={`h-4 w-4 ${isSpeaking ? 'animate-pulse' : ''}`} />
-            <span className="sm:inline hidden">{isSpeaking ? 'Đang phát' : 'Nghe'}</span>
-          </Button>
-          
-          <Button 
-            onClick={handleNext} 
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-hamaspeak-blue to-hamaspeak-purple hover:opacity-90 transition-all"
-          >
-            <span className="sm:inline hidden">
-              {currentIndex < collocations.length - 1 
-                ? 'Tiếp theo' 
-                : 'Hoàn thành'}
-            </span>
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+        {/* Navigation controls */}
+        <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex gap-2">
+            <Button 
+              onClick={handlePrevious} 
+              className="glass-button relative overflow-hidden group"
+              disabled={currentIndex === 0}
+            >
+              <span className="absolute inset-0 bg-white/20 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Trở lại
+            </Button>
+            
+            <Button 
+              onClick={handleNext} 
+              className="glass-button relative overflow-hidden group"
+            >
+              <span className="absolute inset-0 bg-white/20 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+              {currentIndex < collocations.length - 1 ? 'Tiếp theo' : 'Hoàn thành'}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Status info */}
+        <div className="mt-6 text-center text-sm text-gray-500">
+          Thẻ học {currentIndex + 1} / {collocations.length} • 
+          {Object.values(markedCards).filter(Boolean).length} đã ghi nhớ
         </div>
       </Card>
-      
-      {/* Card navigation dots */}
-      <div className="flex flex-wrap justify-center items-center gap-1 mb-6">
-        {collocations.map((collocation, idx) => (
-          <button
-            key={idx}
-            onClick={() => setFlashcardState({ currentIndex: idx, isFlipped: false })}
-            className={`w-3 h-3 rounded-full transition-all ${
-              idx === currentIndex 
-                ? 'bg-hamaspeak-blue scale-125' 
-                : markedCards[collocation]
-                  ? 'bg-green-400'
-                  : idx < currentIndex 
-                    ? 'bg-gray-400' 
-                    : 'bg-gray-200'
-            }`}
-            aria-label={`Go to card ${idx + 1}`}
-          />
-        ))}
-      </div>
-      
-      {/* Current card indicator */}
-      <div className="text-center text-gray-500 text-sm">
-        Thẻ {currentIndex + 1} / {collocations.length}
-        {Object.values(markedCards).filter(Boolean).length > 0 && (
-          <span className="ml-2 text-green-500">
-            (Đã thuộc: {Object.values(markedCards).filter(Boolean).length})
-          </span>
-        )}
-      </div>
     </div>
   );
 };

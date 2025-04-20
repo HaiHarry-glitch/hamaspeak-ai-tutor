@@ -84,14 +84,14 @@ export const startSpeechRecognition = async (language: string = 'en-US'): Promis
     
     recognition.start();
     
-    // Timeout after 10 seconds
+    // Timeout after 20 seconds instead of 10 to give users more time
     setTimeout(() => {
       try {
         recognition.stop();
       } catch (e) {
         // Ignore errors when stopping
       }
-    }, 10000);
+    }, 20000);
   });
 };
 

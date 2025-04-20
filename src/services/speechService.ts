@@ -1,4 +1,3 @@
-
 // Define types to match Microsoft Speech SDK
 interface PronunciationAssessmentConfig {
   referenceText: string;
@@ -145,9 +144,17 @@ export class SpeechService {
   private initializeSpeechSDK() {
     try {
       // Azure Speech service configuration
+      const subscriptionKey = import.meta.env.VITE_AZURE_SPEECH_KEY;
+      const serviceRegion = import.meta.env.VITE_AZURE_SPEECH_REGION;
+
+      if (!subscriptionKey || !serviceRegion) {
+        console.error("Azure Speech Key or Region not configured in .env file!");
+        throw new Error("Azure Speech configuration is missing.");
+      }
+      
       this.speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-        "FQRB4KTAPdhaY5HoGJkvyMsT0y6fIg2Ara8IUVLsgSqQrltGwKBnJQQJ99BDAC3pKaRXJ3w3AAAYACOGl2Yf", 
-        "eastasia"
+        subscriptionKey, 
+        serviceRegion
       );
       this.speechConfig.speechRecognitionLanguage = "en-US";
       
@@ -197,6 +204,18 @@ export class SpeechService {
         
         // Create speech recognizer
         const recognizer = new SpeechSDK.SpeechRecognizer(this.speechConfig, audioConfig);
+        
+        // Add property to extend silence timeout - đợi lâu hơn trước khi kết thúc ghi âm
+        if (recognizer.properties) {
+          // Tăng thời gian timeout khi kết thúc nhận diện (ms)
+          recognizer.properties.setProperty("SPEECH-RecognitionEndTimeout", "15000");
+          
+          // Tăng thời gian timeout khi đợi speech ban đầu (ms)
+          recognizer.properties.setProperty("SPEECH-InitialSilenceTimeout", "10000");
+          
+          // Tăng thời gian timeout khi phát hiện silence (ms)
+          recognizer.properties.setProperty("SPEECH-SegmentationSilenceTimeout", "1000");
+        }
         
         // Apply pronunciation assessment config
         this.pronunciationConfig.applyTo(recognizer);

@@ -34,17 +34,22 @@ const CollocationsView = () => {
       {collocations.length > 0 ? (
         <>
           <div className="bg-white p-6 rounded-lg mb-6 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {collocations.map((collocation, index) => (
                 <div 
                   key={index} 
                   className="p-3 rounded-lg bg-hamaspeak-purple/5 hover:bg-hamaspeak-purple/10 transition-colors border border-hamaspeak-purple/20"
                 >
-                  <div className="flex items-start">
-                    <span className="inline-block p-1 bg-hamaspeak-purple/10 text-hamaspeak-purple rounded-full mr-2">
-                      <LightbulbIcon className="h-4 w-4" />
-                    </span>
-                    <span>{collocation}</span>
+                  <div className="flex flex-col">
+                    <div className="flex items-start">
+                      <span className="inline-block p-1 bg-hamaspeak-purple/10 text-hamaspeak-purple rounded-full mr-2">
+                        <LightbulbIcon className="h-4 w-4" />
+                      </span>
+                      <span className="font-medium">{collocation.english}</span>
+                    </div>
+                    <div className="mt-1 ml-7 text-gray-600 text-sm">
+                      {collocation.vietnamese}
+                    </div>
                   </div>
                 </div>
               ))}

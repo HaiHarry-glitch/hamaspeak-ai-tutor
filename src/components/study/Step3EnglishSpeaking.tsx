@@ -39,7 +39,7 @@ const Step3EnglishSpeaking: React.FC<PronunciationComponentProps> = ({
     
     setIsSpeaking(true);
     try {
-      await speakText(currentCollocation, selectedVoice);
+      await speakText(currentCollocation.english, selectedVoice);
     } catch (error) {
       console.error('Speech error:', error);
       toast({
@@ -60,12 +60,40 @@ const Step3EnglishSpeaking: React.FC<PronunciationComponentProps> = ({
     setScoreDetails(null);
     setShowFeedback(false);
     
+    toast({
+      title: 'Đang lắng nghe...',
+      description: 'Hãy đọc theo từ/cụm từ được hiển thị. Nói to và rõ ràng.',
+      duration: 3000,
+    });
+    
     try {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (permissionError) {
+        console.error('Microphone permission denied:', permissionError);
+        toast({
+          title: 'Không có quyền truy cập microphone',
+          description: 'Vui lòng cấp quyền truy cập microphone để sử dụng tính năng này.',
+          variant: 'destructive'
+        });
+        setIsListening(false);
+        return;
+      }
+      
       const result = await startSpeechRecognition('en-US');
+      console.log('Speech recognition result:', result);
       setUserTranscript(result.transcript);
       
       if (onAnalyzePronunciation) {
-        const scores = await onAnalyzePronunciation(currentCollocation);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        toast({
+          title: 'Đang phân tích phát âm...',
+          description: 'Vui lòng đợi trong giây lát.',
+          duration: 2000,
+        });
+        
+        const scores = await onAnalyzePronunciation(currentCollocation.english);
         const pronunciationScores: ScoreDetails = {
           overallScore: scores.overallScore.pronScore,
           accuracyScore: scores.overallScore.accuracyScore,
@@ -79,7 +107,7 @@ const Step3EnglishSpeaking: React.FC<PronunciationComponentProps> = ({
         setScoreDetails(pronunciationScores);
         
         if (scores.overallScore.pronScore < 90) {
-          const errorWords = currentCollocation.split(' ')
+          const errorWords = currentCollocation.english.split(' ')
             .filter(() => Math.random() > 0.7)
             .slice(0, 2);
           
@@ -122,11 +150,27 @@ const Step3EnglishSpeaking: React.FC<PronunciationComponentProps> = ({
       setAttemptsLeft(prev => prev - 1);
     } catch (error) {
       console.error('Speech recognition error:', error);
-      toast({
-        title: 'Lỗi nhận diện giọng nói',
-        description: 'Không thể nhận diện giọng nói. Vui lòng đảm bảo microphone đang hoạt động và thử lại.',
-        variant: 'destructive'
-      });
+      
+      if (error.message && error.message.includes('no speech')) {
+        toast({
+          title: 'Không phát hiện giọng nói',
+          description: 'Vui lòng nói to và rõ ràng hơn để chúng tôi có thể nghe được bạn.',
+          variant: 'destructive'
+        });
+      } else if (error.message && error.message.includes('network')) {
+        toast({
+          title: 'Lỗi kết nối mạng',
+          description: 'Vui lòng kiểm tra kết nối internet của bạn và thử lại.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Lỗi nhận diện giọng nói',
+          description: 'Không thể nhận diện giọng nói. Vui lòng đảm bảo microphone đang hoạt động và thử lại.',
+          variant: 'destructive'
+        });
+      }
+      
       setUserTranscript('');
     } finally {
       setIsListening(false);
@@ -221,7 +265,7 @@ const Step3EnglishSpeaking: React.FC<PronunciationComponentProps> = ({
       <div className="bg-white p-6 rounded-lg mb-6 shadow-sm">
         <div className="text-center">
           <h3 className="text-xl font-medium text-hamaspeak-dark mb-4">
-            {currentCollocation}
+            {currentCollocation.english}
           </h3>
         </div>
         
@@ -294,7 +338,7 @@ const Step3EnglishSpeaking: React.FC<PronunciationComponentProps> = ({
           feedback={feedback}
           onPracticeWord={handlePracticeWord}
           transcript={userTranscript}
-          referenceText={currentCollocation}
+          referenceText={currentCollocation.english}
         />
       )}
 
