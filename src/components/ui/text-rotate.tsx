@@ -18,27 +18,26 @@ const TextRotate = ({ words, className, ...props }: TextRotateProps) => {
   }, [words.length]);
 
   return (
-    <span
+    <div
       className={cn(
-        "inline-flex h-[1.5em] overflow-hidden text-blue-600",
+        "relative h-20 overflow-hidden bg-gradient-to-r from-hamaspeak-blue to-hamaspeak-purple bg-clip-text text-transparent",
         className
       )}
       {...props}
     >
-      <span
-        className="flex flex-col items-center animate-rotate-words"
+      <div
+        className="absolute transition-transform duration-500 ease-in-out"
         style={{
           transform: `translateY(-${currentWord * 100}%)`,
-          transition: "transform 0.5s ease-in-out",
         }}
       >
         {words.map((word, i) => (
-          <span key={i} className="h-[1.5em] flex items-center">
+          <div key={i} className="h-20 flex items-center text-4xl font-bold">
             {word}
-          </span>
+          </div>
         ))}
-      </span>
-    </span>
+      </div>
+    </div>
   );
 };
 
