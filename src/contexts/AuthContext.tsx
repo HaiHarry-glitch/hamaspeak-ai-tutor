@@ -15,6 +15,13 @@ interface AuthContextType {
   dailyUsageCount: number;
   remainingUsage: number;
   incrementDailyUsage: () => void;
+  // Add missing properties and methods
+  resetPassword: (email: string) => Promise<void>;
+  signInAnonymously: () => Promise<void>;
+  sessionTriesRemaining: number;
+  updateProfile: (profile: Partial<User>) => Promise<void>;
+  useSessionTry: () => number;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,21 +33,32 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   dailyUsageCount: 0,
   remainingUsage: 3,
-  incrementDailyUsage: () => {}
+  incrementDailyUsage: () => {},
+  // Add missing properties to default values
+  resetPassword: async () => {},
+  signInAnonymously: async () => {},
+  sessionTriesRemaining: 3,
+  updateProfile: async () => {},
+  useSessionTry: () => 0,
+  isLoading: false,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [dailyUsageCount, setDailyUsageCount] = useState(0);
+  const [sessionTriesRemaining, setSessionTriesRemaining] = useState(3);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     // Initial session check
     const checkSession = async () => {
+      setIsLoading(true);
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
+      setIsLoading(false);
     };
     checkSession();
 
@@ -106,6 +124,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Implement missing methods
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      
+      if (error) throw error;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gửi email đặt lại mật khẩu thất bại');
+      throw error;
+    }
+  };
+
+  const signInAnonymously = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        // Use a shared guest account for anonymous access
+        email: 'guest@example.com',
+        password: 'guestpassword123'
+      });
+      
+      if (error) throw error;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Đăng nhập ẩn danh thất bại');
+      throw error;
+    }
+  };
+
+  const updateProfile = async (profile: Partial<User>) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: profile
+      });
+      
+      if (error) throw error;
+      toast.success('Cập nhật hồ sơ thành công');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Cập nhật hồ sơ thất bại');
+      throw error;
+    }
+  };
+
+  const useSessionTry = () => {
+    setSessionTriesRemaining(prev => Math.max(0, prev - 1));
+    return sessionTriesRemaining;
+  };
+
   const remainingUsage = Math.max(3 - dailyUsageCount, 0);
 
   const incrementDailyUsage = () => {
@@ -122,7 +188,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signOut,
       dailyUsageCount,
       remainingUsage,
-      incrementDailyUsage
+      incrementDailyUsage,
+      resetPassword,
+      signInAnonymously,
+      sessionTriesRemaining,
+      updateProfile,
+      useSessionTry,
+      isLoading
     }}>
       {children}
     </AuthContext.Provider>
