@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
@@ -122,19 +121,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const resetPassword = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/reset-password',
-      });
-      
-      if (error) throw error;
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Gửi email đặt lại mật khẩu thất bại');
-      throw error;
-    }
-  };
-
   const signInAnonymously = async () => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -160,6 +146,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Cập nhật hồ sơ thành công');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Cập nhật hồ sơ thất bại');
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      
+      if (error) throw error;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gửi email đặt lại mật khẩu thất bại');
       throw error;
     }
   };

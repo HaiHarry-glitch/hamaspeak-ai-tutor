@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { StudyProvider, useStudy } from '@/contexts/StudyContext';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import TextInput from '@/components/study/TextInput';
 import CollocationsView from '@/components/study/CollocationsView';
 import Step1Listening from '@/components/study/Step1Listening';
@@ -199,11 +198,9 @@ const StudyContent = () => {
 
 const Study = () => {
   return (
-    <AuthProvider>
-      <StudyProvider>
-        <StudyContent />
-      </StudyProvider>
-    </AuthProvider>
+    <StudyProvider>
+      <StudyContent />
+    </StudyProvider>
   );
 };
 
