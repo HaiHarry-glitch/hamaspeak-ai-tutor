@@ -4,25 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  isAuthenticated: boolean;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  dailyUsageCount: number;
-  remainingUsage: number;
-  incrementDailyUsage: () => void;
-  // Add missing properties and methods
-  resetPassword: (email: string) => Promise<void>;
-  signInAnonymously: () => Promise<void>;
-  sessionTriesRemaining: number;
-  updateProfile: (profile: Partial<User>) => Promise<void>;
-  useSessionTry: () => number;
-  isLoading: boolean;
-}
+import { AuthContextType } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -34,7 +16,6 @@ const AuthContext = createContext<AuthContextType>({
   dailyUsageCount: 0,
   remainingUsage: 3,
   incrementDailyUsage: () => {},
-  // Add missing properties to default values
   resetPassword: async () => {},
   signInAnonymously: async () => {},
   sessionTriesRemaining: 3,
@@ -124,7 +105,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Implement missing methods
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {

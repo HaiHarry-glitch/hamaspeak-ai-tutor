@@ -13,12 +13,13 @@ export interface User {
 
 export interface AuthContextType {
   user: User | null;
+  session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   sessionTriesRemaining: number;
   dailyUsageCount: number;
   remainingUsage: number;
-  incrementDailyUsage: () => boolean;
+  incrementDailyUsage: () => void;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signInAnonymously: () => Promise<void>;
