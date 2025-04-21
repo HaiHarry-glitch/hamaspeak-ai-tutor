@@ -1,10 +1,10 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User, Session } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { AuthContextType } from '@/types/auth';
+import { AuthContextType, User as CustomUser } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -25,12 +25,29 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<CustomUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [dailyUsageCount, setDailyUsageCount] = useState(0);
   const [sessionTriesRemaining, setSessionTriesRemaining] = useState(3);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Helper function to convert Supabase user to our custom User type
+  const mapSupabaseUserToCustomUser = (supabaseUser: any): CustomUser | null => {
+    if (!supabaseUser) return null;
+    
+    return {
+      id: supabaseUser.id,
+      email: supabaseUser.email,
+      displayName: supabaseUser.user_metadata?.display_name || supabaseUser.email?.split('@')[0] || 'User',
+      photoURL: supabaseUser.user_metadata?.avatar_url,
+      isAnonymous: supabaseUser.email === 'guest@example.com',
+      createdAt: supabaseUser.created_at || new Date().toISOString(),
+      lastLoginAt: supabaseUser.last_sign_in_at || new Date().toISOString(),
+      speechCredits: supabaseUser.user_metadata?.speech_credits,
+      membershipType: supabaseUser.user_metadata?.membership_type || 'free'
+    };
+  };
 
   useEffect(() => {
     // Initial session check
@@ -38,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+      setUser(currentSession?.user ? mapSupabaseUserToCustomUser(currentSession.user) : null);
       setIsLoading(false);
     };
     checkSession();
@@ -46,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+      setUser(currentSession?.user ? mapSupabaseUserToCustomUser(currentSession.user) : null);
 
       // Handle redirects based on auth state
       if (event === 'SIGNED_IN') {
@@ -133,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateProfile = async (profile: Partial<User>) => {
+  const updateProfile = async (profile: Partial<CustomUser>) => {
     try {
       const { error } = await supabase.auth.updateUser({
         data: profile
